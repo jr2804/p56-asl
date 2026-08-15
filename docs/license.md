@@ -4,8 +4,8 @@ hide:
 - feedback
 ---
 
-# License
+## License
 
-```
+```text
 --8<-- "LICENSE"
 ```
