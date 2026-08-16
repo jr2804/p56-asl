@@ -330,12 +330,73 @@ impl PyPreFilter {
     }
 }
 
+/// Stateful FFT resampler from any input rate to any target rate, mono.
+///
+/// Used by the CLI for `--fs`: streaming-safe — the rubato instance
+/// carries its overlap across `process` calls. `flush` zero-pads the
+/// final partial chunk and trims the ramp-up delay so the total output
+/// length equals `round(total_input * target / source)`.
+#[pyclass(module = "p56_asl._native", name = "Resampler")]
+struct PyResampler {
+    inner: resample::Resampler,
+    total_input: u64,
+}
+
+#[pymethods]
+impl PyResampler {
+    /// Creates a resampler from `sample_rate` to `target_rate` (Hz).
+    ///
+    /// # Errors
+    ///
+    /// [`pyo3::exceptions::PyValueError`] for invalid rates or internal
+    /// construction failures.
+    #[new]
+    #[pyo3(signature = (sample_rate, target_rate))]
+    fn new(sample_rate: u32, target_rate: u32) -> PyResult<Self> {
+        let inner = resample::Resampler::new(sample_rate, target_rate)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(Self {
+            inner,
+            total_input: 0,
+        })
+    }
+
+    /// Feeds samples (float32); returns all output available so far.
+    fn process(&mut self, samples: Vec<f32>) -> PyResult<Vec<f32>> {
+        self.total_input += samples.len() as u64;
+        self.inner
+            .process(&samples)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    /// Zero-pads and drains; returns the final output samples.
+    fn flush(&mut self) -> PyResult<Vec<f32>> {
+        let total = self.total_input;
+        self.inner
+            .flush(total)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    /// Source rate in Hz.
+    #[getter]
+    fn sample_rate(&self) -> u32 {
+        self.inner.source_rate()
+    }
+
+    /// Target rate in Hz.
+    #[getter]
+    fn target_rate(&self) -> u32 {
+        self.inner.target_rate()
+    }
+}
+
 /// The `p56_asl._native` extension module.
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyActiveSpeechLevelMeter>()?;
     m.add_class::<PyMeasurement>()?;
     m.add_class::<PyPreFilter>()?;
+    m.add_class::<PyResampler>()?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }
