@@ -1,7 +1,7 @@
 [tasks.format]
 description = "Format code (ruff, isort, undersort)"
 run = [
-	"undersort src tests",
+	"csort run src/ tests/ scripts/ --config .config/csort.toml",
 	"ruff format src tests",
 	"ruff check src tests --select I --fix",
 ]
