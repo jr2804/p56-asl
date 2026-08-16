@@ -1,6 +1,6 @@
 # Extended ITU-T Rec. P.56 - Active Speech Level (ASL)
 
-An extended version of the ITU-T Rec. P.56 Active Speech Level (ASL). Complies with reference C-implementation but re-implemented in Rust and MIT-licensed. 
+An extended version of the ITU-T Rec. P.56 Active Speech Level (ASL). Complies with reference C-implementation but re-implemented in Rust and MIT-licensed.
 
 ## DOX — self-documenting AGENTS.md hierarchy
 

@@ -34,6 +34,14 @@ uv.lock
 # Machine-local MCP tool config
 /config/
 
+# G.191 sv56demo generated outputs (regenerable from ref/ STL, not used by tests)
+/tests/data/*.ref
+!/tests/data/*.log.ref
+/tests/data/*.nrm
+/tests/data/*.ltl
+/tests/data/voice_24.src
+/tests/data/voice_32.src
+
 # Copier answers (regenerated on update)
 .copier-answers.yml
 
@@ -56,10 +64,5 @@ skills-lock.json
 # Implementation plans — mutable working artifacts, never committed
 /.agents/plans/
 
-# G.191 sv56demo generated outputs (regenerable from ref/ STL, not used by tests)
-/tests/data/*.ref
-!/tests/data/*.log.ref
-/tests/data/*.nrm
-/tests/data/*.ltl
-/tests/data/voice_24.src
-/tests/data/voice_32.src
+# debug artifacts
+*.pdb
