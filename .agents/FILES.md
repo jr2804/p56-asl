@@ -14,6 +14,7 @@ Kept compact — agents hallucinate less when they know where definitions live.
 | What                   | Where                                                           | Key names                                       |
 | ---------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
 | Package source root    | `src/p56_asl/`  | `__init__.py`, `__about__.py` (version)         |
+| Rust core              | `src/*.rs`                                                      | `lib.rs` (PyO3), `prefilter.rs`, `resample.rs`, `actlevel.rs`, `filter.rs`, `histogram.rs`, `params.rs`; compiled to `p56_asl._native` (stubs: `src/p56_asl/_native.pyi`) |
 | CLI entry points       | `src/p56_asl/cli/`            | `app.py` (Typer app), `args.py`, `commands.py`  |
 | Test suite             | `tests/`                                                        | `test_*.py`, `conftest.py`                      |
 | Project metadata       | `pyproject.toml`                                                | `[project]`, `[tool.pytest.ini_options]`        |

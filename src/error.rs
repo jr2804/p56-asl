@@ -15,6 +15,8 @@ pub enum Error {
     NoSamples,
     /// Resampler construction or processing failure.
     Resampler(String),
+    /// Unknown pre-filter band name (expected `NB`, `SWB` or `FB`).
+    InvalidBand(String),
 }
 
 impl fmt::Display for Error {
@@ -33,6 +35,12 @@ impl fmt::Display for Error {
             }
             Self::NoSamples => write!(f, "no samples processed"),
             Self::Resampler(msg) => write!(f, "resampler error: {msg}"),
+            Self::InvalidBand(name) => {
+                write!(
+                    f,
+                    "unknown pre-filter band {name:?} (expected NB, SWB or FB)"
+                )
+            }
         }
     }
 }

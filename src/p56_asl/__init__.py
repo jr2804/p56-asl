@@ -12,13 +12,15 @@ except importlib.metadata.PackageNotFoundError:
 # The Rust core is compiled into `p56_asl._native` by maturin. Import it
 # lazily so that pure-Python use (e.g. the CLI help) works without a build.
 try:
-    from p56_asl._native import ActiveSpeechLevelMeter, Measurement
+    from p56_asl._native import ActiveSpeechLevelMeter, Measurement, PreFilter
 except ImportError:  # pragma: no cover - native extension not built yet
     ActiveSpeechLevelMeter = None  # type: ignore[assignment,misc]
     Measurement = None  # type: ignore[assignment,misc]
+    PreFilter = None  # type: ignore[assignment,misc]
 
 __all__ = [
     "ActiveSpeechLevelMeter",
     "Measurement",
+    "PreFilter",
     "__version__",
 ]

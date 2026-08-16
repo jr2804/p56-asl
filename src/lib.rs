@@ -10,6 +10,7 @@ mod error;
 mod filter;
 mod histogram;
 mod params;
+mod prefilter;
 mod resample;
 
 use numpy::{PyArray1, PyArrayDescrMethods, PyArrayMethods, PyUntypedArray, PyUntypedArrayMethods};
@@ -69,7 +70,7 @@ struct PyActiveSpeechLevelMeter {
     inner: actlevel::ActiveSpeechLevelMeter,
     /// Resampler for input rates below 16 kHz; `None` when the input is
     /// already at least 16 kHz.
-    resampler: Option<resample::Resampler16k>,
+    resampler: Option<resample::Resampler>,
     /// Total input samples fed (pre-resampling), for `flush` length math.
     total_input: u64,
 }
@@ -96,7 +97,7 @@ impl PyActiveSpeechLevelMeter {
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let resampler = if sample_rate < resample::TARGET_RATE as f64 {
             Some(
-                resample::Resampler16k::new(sample_rate as u32)
+                resample::Resampler::new(sample_rate as u32, resample::TARGET_RATE)
                     .map_err(|e| PyValueError::new_err(e.to_string()))?,
             )
         } else {
@@ -263,11 +264,78 @@ impl PyMeasurement {
     }
 }
 
+/// P.56 protection pre-filter (clause 10.2/Table 3, Annex B/C).
+///
+/// Streaming-safe biquad cascade matching the tolerance corridor of the
+/// selected band (NB, SWB or FB) at the configured sampling rate.
+#[pyclass(module = "p56_asl._native", name = "PreFilter")]
+struct PyPreFilter {
+    inner: prefilter::PreFilter,
+}
+
+#[pymethods]
+impl PyPreFilter {
+    #[new]
+    #[pyo3(signature = (band, fs))]
+    fn new(band: &str, fs: f64) -> PyResult<Self> {
+        let band =
+            prefilter::Band::parse(band).map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let inner = prefilter::PreFilter::new(band, fs)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(Self { inner })
+    }
+
+    /// Filters samples in place. Accepts a 1-D numpy array (float32,
+    /// float64, int8, int16, int32) and returns a new float32 array to
+    /// keep integer inputs usable (gains are fractional).
+    fn process(
+        &mut self,
+        py: Python<'_>,
+        samples: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyArray1<f32>>> {
+        let input = convert_to_f32(py, samples, 32)?;
+        let mut buf = input;
+        self.inner.process(&mut buf);
+        let out = PyArray1::<f32>::from_vec(py, buf);
+        Ok(out.unbind())
+    }
+
+    /// Resets the filter state.
+    fn reset(&mut self) {
+        self.inner.reset();
+    }
+
+    /// Magnitude response `|H(f)|` at frequency `f` (Hz), relative to 1 kHz.
+    #[pyo3(name = "response_db")]
+    fn response_db(&self, f: f64) -> f64 {
+        self.inner.response_db(f)
+    }
+
+    /// Band name ("nb", "swb" or "fb").
+    #[getter]
+    fn band(&self) -> &'static str {
+        self.inner.band().as_str()
+    }
+
+    /// Sampling rate in Hz.
+    #[getter]
+    fn sample_rate(&self) -> f64 {
+        self.inner.fs()
+    }
+
+    /// Number of biquad sections.
+    #[getter]
+    fn num_sections(&self) -> usize {
+        self.inner.num_sections()
+    }
+}
+
 /// The `p56_asl._native` extension module.
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyActiveSpeechLevelMeter>()?;
     m.add_class::<PyMeasurement>()?;
+    m.add_class::<PyPreFilter>()?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }
@@ -276,3 +344,5 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
 pub use actlevel::{bin_interp, ActiveSpeechLevelMeter, Measurement};
 pub use error::{Error, Result};
 pub use params::Params;
+pub use prefilter::{Band, PreFilter};
+pub use resample::Resampler;

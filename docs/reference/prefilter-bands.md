@@ -103,7 +103,7 @@ Butterworth pole geometry (Chebyshev for the FB low pass):
 | Band | High pass | Low pass |
 | ---- | --------- | -------- |
 | NB | Butterworth-8 @ 150 Hz | Butterworth-6 @ 7.3 kHz |
-| SWB | Butterworth-12 @ 50 Hz | Butterworth-6 @ 14 kHz |
+| SWB | Butterworth-12 @ 50 Hz | Butterworth-8 @ 14.25–15.2 kHz (rate-adaptive, see below) |
 | FB | Butterworth-14 @ 24 Hz | Chebyshev-I n=10, 0.15 dB @ 20 kHz |
 
 The low-pass half is omitted when the Nyquist frequency does not exceed the
@@ -112,6 +112,12 @@ sits outside the corridor anyway, and the passband itself satisfies the +0.25 dB
 ceiling). When the Nyquist frequency exceeds the ceiling but the corner would
 land too close to it, the corner moves to 0.98 × Nyquist to keep bilinear
 warping inside tolerance.
+
+The SWB low-pass corner is rate-adaptive: bilinear warping squeezes the digital
+transition as the corner approaches Nyquist (visible first at high sampling
+rates such as 96 kHz), so the corner is placed by inverse-prewarping the
+12 kHz point onto the −0.08 dB contour of the Butterworth-8 magnitude,
+clamped to 14.25–15.2 kHz and 0.98 × Nyquist.
 
 Each design was verified against its corridor on a dense logarithmic grid; see
 the `corridor_compliance` tests in `src/prefilter.rs`.
