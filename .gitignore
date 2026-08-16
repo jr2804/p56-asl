@@ -12,6 +12,13 @@ wheels/
 *.env
 uv.lock
 
+# Rust / maturin build artifacts
+/target
+*.pyd
+*.so
+*.dylib
+*.pyc
+
 # Dev tools/MCP server data/dirs
 /.config/chunkhound/db
 .sisyphus
@@ -22,6 +29,7 @@ uv.lock
 /.tmp
 /tmp
 /temp
+/ref
 
 # Copier answers (regenerated on update)
 .copier-answers.yml

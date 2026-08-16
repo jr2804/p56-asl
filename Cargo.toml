@@ -1,0 +1,26 @@
+[package]
+name = "p56-asl-core"
+version = "0.0.0"
+edition = "2021"
+description = "Extended ITU-T Rec. P.56 Active Speech Level (ASL) core, Rust implementation"
+license = "MIT"
+rust-version = "1.85"
+
+[lib]
+name = "_native"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+numpy = "0.23"
+pyo3 = "0.23"
+rubato = { version = "0.16.2", default-features = false, features = ["fft_resampler"] }
+
+# extension-module must not be enabled for `cargo test`; maturin enables it
+# when building the actual extension (see [tool.maturin] in pyproject.toml).
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]
+
+[profile.release]
+# Keep numeric results deterministic across builds (no fast-math style opts)
+lto = true
