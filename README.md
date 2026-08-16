@@ -1,6 +1,6 @@
 # Extended ITU-T Rec. P.56 - Active Speech Level (ASL)
 
-> An extended version of the ITU-T Rec. P.56 Active Speech Level (ASL). Complies with reference C-implementation but re-implemented in Rust and MIT-licensed. 
+> An extended version of the ITU-T Rec. P.56 Active Speech Level (ASL). Complies with reference C-implementation but re-implemented in Rust and MIT-licensed.
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
@@ -42,16 +42,10 @@ mise all        # test + lint + format in one pass
 ### CLI Commands
 
 ```bash
-uv run p56_asl                  # default command
-uv run p56_asl greet Alice      # greet someone
-uv run p56_asl add 5 3          # add numbers
-uv run p56_asl --version        # show version
+uv run p56-asl --help         # app/script entry
+uv run -m p56_asl --help      # module entry
+uv run p56-asl --version      # show version
 ```
-
-| Environment Variable | Description |
-|----------------------|-------------|
-| `P56_ASL_CACHE` | Enable/disable caching (true/false) |
-| `P56_ASL_OUTPUT_FILE` | Default output file path |
 
 ## Development
 
