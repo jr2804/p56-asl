@@ -7,8 +7,9 @@ import zipfile
 from pathlib import Path
 
 import pytest
+import soundfile as sf
 
-from p56_asl import ActiveSpeechLevelMeter, PreFilter, read_wav
+from p56_asl import ActiveSpeechLevelMeter, PreFilter
 
 P501_ANNEX_D_URL = "https://www.itu.int/wftp3/public/t/testsignal/GenAudio/P501/v2025_04/Speech_Signals_AnnexD.zip"
 
@@ -55,18 +56,20 @@ def measure_wav(path: Path, band: str | None = None) -> tuple[float, float, int]
     Applies the P.56 pre-filter for `band` ("NB"/"SWB"/"FB" or `None`),
     returns `(active_speech_level_db, activity_factor, sample_rate)`.
     """
-    frames, info = read_wav(path)
+    frames, rate = sf.read(path, always_2d=True)
     samples = frames[:, 0].astype("float32", copy=False)
-    rate = float(info.sample_rate)
+    rate = float(rate)
     if band is not None:
         prefilter = PreFilter(band, rate)
         prefilter.reset()
         samples = prefilter.process(samples)
-    meter = ActiveSpeechLevelMeter(sample_rate=rate, bit_depth=info.bit_depth)
+    subtype = sf.info(path).subtype
+    bit_depth = 32 if subtype in ("FLOAT", "DOUBLE") else int(subtype.split("_")[1])
+    meter = ActiveSpeechLevelMeter(sample_rate=rate, bit_depth=bit_depth)
     for k in range(0, len(samples), 65536):
         meter.process_block(samples[k : k + 65536])
     result = meter.finish()
-    return result.active_speech_level_db, result.activity_factor, info.sample_rate
+    return result.active_speech_level_db, result.activity_factor, int(rate)
 
 
 def pytest_configure(config: pytest.Config) -> None:

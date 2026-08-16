@@ -7,10 +7,10 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import soundfile as sf
 from typer.testing import CliRunner
 
 from p56_asl.cli.app import app
-from p56_asl.wav import WavInfo, read_wav, write_wav
 
 pytest.importorskip("p56_asl._native", reason="native extension not built")
 
@@ -153,8 +153,8 @@ def test_calibrate_scales_by_gain(tmp_path: Path) -> None:
     _write(src, _speech())
     result = runner.invoke(app, ["calibrate", str(src), "6.02", str(dst)])
     assert result.exit_code == 0, result.output
-    a, _ = read_wav(src)
-    b, _ = read_wav(dst)
+    a, _ = sf.read(src, always_2d=True)
+    b, _ = sf.read(dst, always_2d=True)
     np.testing.assert_allclose(np.abs(b).max(), np.abs(a).max() * 2.0, rtol=1e-2)
 
 
@@ -164,8 +164,8 @@ def test_calibrate_explicit_plus_sign(tmp_path: Path) -> None:
     _write(src, _speech())
     result = runner.invoke(app, ["calibrate", str(src), "+6.02", str(dst)])
     assert result.exit_code == 0, result.output
-    a, _ = read_wav(src)
-    b, _ = read_wav(dst)
+    a, _ = sf.read(src, always_2d=True)
+    b, _ = sf.read(dst, always_2d=True)
     np.testing.assert_allclose(np.abs(b).max(), np.abs(a).max() * 2.0, rtol=1e-2)
 
 
@@ -175,8 +175,8 @@ def test_calibrate_negative_gain(tmp_path: Path) -> None:
     _write(src, _speech())
     result = runner.invoke(app, ["calibrate", str(src), "-6.02", str(dst)])
     assert result.exit_code == 0, result.output
-    a, _ = read_wav(src)
-    b, _ = read_wav(dst)
+    a, _ = sf.read(src, always_2d=True)
+    b, _ = sf.read(dst, always_2d=True)
     np.testing.assert_allclose(np.abs(b).max(), np.abs(a).max() / 2.0, rtol=1e-2)
 
 
@@ -186,19 +186,18 @@ def test_calibrate_alias_scale(tmp_path: Path) -> None:
     _write(src, _speech())
     result = runner.invoke(app, ["scale", str(src), "0", str(dst)])
     assert result.exit_code == 0, result.output
-    a, _ = read_wav(src)
-    b, _ = read_wav(dst)
+    a, _ = sf.read(src, always_2d=True)
+    b, _ = sf.read(dst, always_2d=True)
     np.testing.assert_allclose(b, a, atol=1e-4)
 
 
 def test_calibrate_in_place(tmp_path: Path) -> None:
     src = tmp_path / "in.wav"
     _write(src, _speech())
-    a, info = read_wav(src)
+    a, _ = sf.read(src, always_2d=True)
     result = runner.invoke(app, ["calibrate", str(src), "-20"])
     assert result.exit_code == 0, result.output
-    b, info2 = read_wav(src)
-    assert info.sample_rate == info2.sample_rate
+    b, _ = sf.read(src, always_2d=True)
     np.testing.assert_allclose(np.abs(b).max(), np.abs(a).max() / 10.0, rtol=1e-2)
 
 
@@ -209,8 +208,8 @@ def test_calibrate_selected_channels_only(tmp_path: Path) -> None:
     _write(src, sig)
     result = runner.invoke(app, ["calibrate", str(src), "6.02", str(dst), "--channels", "1"])
     assert result.exit_code == 0, result.output
-    a, _ = read_wav(src)
-    b, _ = read_wav(dst)
+    a, _ = sf.read(src, always_2d=True)
+    b, _ = sf.read(dst, always_2d=True)
     # channel 1 scaled by ~2x
     np.testing.assert_allclose(np.abs(b[:, 0]).max(), np.abs(a[:, 0]).max() * 2.0, rtol=1e-2)
     # channel 2 unchanged
@@ -225,9 +224,9 @@ def test_calibrate_resample_channel_selection(tmp_path: Path) -> None:
     _write(src, sig)
     result = runner.invoke(app, ["calibrate", str(src), "6.02", str(dst), "--channels", "2", "--fs", "8000"])
     assert result.exit_code == 0, result.output
-    a, _ = read_wav(src)
-    b, info = read_wav(dst)
-    assert info.sample_rate == 8000
+    a, _ = sf.read(src, always_2d=True)
+    b, rate = sf.read(dst, always_2d=True)
+    assert rate == 8000
     # ch2 = 0.5 x (rolled) ch1; scaled by +6.02 dB it matches ch1's
     # (resampled) amplitude, proving the *selected* channel got the gain
     np.testing.assert_allclose(np.abs(b[:, 1]).max(), np.abs(b[:, 0]).max(), rtol=5e-2)
@@ -239,8 +238,8 @@ def test_calibrate_resample_rate_written(tmp_path: Path) -> None:
     _write(src, _speech(fs=_FS))
     result = runner.invoke(app, ["calibrate", str(src), "0", str(dst), "--fs", "48000"])
     assert result.exit_code == 0, result.output
-    _, info = read_wav(dst)
-    assert info.sample_rate == 48_000
+    _, rate = sf.read(dst, always_2d=True)
+    assert rate == 48_000
 
 
 def test_calibrate_gain_roundtrip(tmp_path: Path) -> None:
@@ -251,8 +250,8 @@ def test_calibrate_gain_roundtrip(tmp_path: Path) -> None:
     _write(src, _speech())
     assert runner.invoke(app, ["calibrate", str(src), "6.02", str(mid)]).exit_code == 0
     assert runner.invoke(app, ["calibrate", str(mid), "-6.02", str(dst)]).exit_code == 0
-    a, _ = read_wav(src)
-    b, _ = read_wav(dst)
+    a, _ = sf.read(src, always_2d=True)
+    b, _ = sf.read(dst, always_2d=True)
     np.testing.assert_allclose(np.abs(b).max(), np.abs(a).max(), rtol=5e-2)
 
 
@@ -271,8 +270,8 @@ def test_calibrate_time_window(tmp_path: Path) -> None:
     _write(src, sig)
     result = runner.invoke(app, ["calibrate", str(src), "0", str(dst), "--time-start", "0.5"])
     assert result.exit_code == 0, result.output
-    b, info = read_wav(dst)
-    assert info.channels == 2
+    b, _ = sf.read(dst, always_2d=True)
+    assert sf.info(dst).channels == 2
     assert len(b) == _FS // 2
 
 
@@ -288,11 +287,11 @@ def test_calibrate_dtype_roundtrip(tmp_path: Path, bit_depth: int, is_float: boo
     _write(src, _speech(), bit_depth=bit_depth, is_float=is_float)
     result = runner.invoke(app, ["calibrate", str(src), "-6.02", str(dst)])
     assert result.exit_code == 0, result.output
-    a, info_a = read_wav(src)
-    b, info_b = read_wav(dst)
-    assert (info_b.bit_depth, info_b.is_float) == (bit_depth, is_float)
-    assert info_b.channels == info_a.channels
-    assert info_b.sample_rate == info_a.sample_rate
+    a, _ = sf.read(src, always_2d=True)
+    b, _ = sf.read(dst, always_2d=True)
+    assert _dtype_of(sf.info(dst).subtype) == (bit_depth, is_float)
+    assert sf.info(dst).channels == sf.info(src).channels
+    assert sf.info(dst).samplerate == sf.info(src).samplerate
     atol = {8: 1 / 64, 16: 1 / 4096, 24: 1 / 65536}.get(bit_depth, 1e-6)
     np.testing.assert_allclose(b, a * 10.0 ** (-6.02 / 20.0), atol=atol)
 
@@ -310,9 +309,15 @@ def _speech(n: int = 48_000, fs: int = _FS, channels: int = 1, seed: int = 0) ->
     return np.column_stack([sig, ch2])
 
 
+def _dtype_of(subtype: str) -> tuple[int, bool]:
+    """(bit_depth, is_float) from a soundfile subtype string."""
+    if subtype == "FLOAT":
+        return 32, True
+    if subtype == "DOUBLE":
+        return 64, True
+    return int(subtype.split("_")[1].lstrip("U")), False
+
+
 def _write(path: Path, sig: np.ndarray, fs: int = _FS, bit_depth: int = 16, is_float: bool = False) -> None:
-    write_wav(
-        path,
-        sig,
-        WavInfo(sample_rate=fs, channels=sig.shape[1], bit_depth=bit_depth, is_float=is_float),
-    )
+    subtype = ("FLOAT" if bit_depth == 32 else "DOUBLE") if is_float else "PCM_U8" if bit_depth == 8 else f"PCM_{bit_depth}"
+    sf.write(path, sig, fs, subtype=subtype)

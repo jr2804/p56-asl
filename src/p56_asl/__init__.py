@@ -20,15 +20,10 @@ except ImportError:  # pragma: no cover - native extension not built yet
     PreFilter = None  # type: ignore
     Resampler = None  # type: ignore[invalid-assignment]
 
-from p56_asl.wav import WavInfo, read_wav, write_wav
-
 __all__ = [
     "ActiveSpeechLevelMeter",
     "Measurement",
     "PreFilter",
     "Resampler",
-    "WavInfo",
     "__version__",
-    "read_wav",
-    "write_wav",
 ]

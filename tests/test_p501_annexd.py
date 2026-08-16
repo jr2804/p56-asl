@@ -11,12 +11,16 @@ deselect with `-m "not network"` when offline.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
 import pytest
+import soundfile as sf
+from typer.testing import CliRunner
 
-from p56_asl import ActiveSpeechLevelMeter, PreFilter, read_wav
+from p56_asl import ActiveSpeechLevelMeter, PreFilter
+from p56_asl.cli.app import app
 
 from .conftest import measure_wav
 
@@ -56,8 +60,8 @@ def test_p501_annex_d_asl_minus_26_dbov(p501_annex_d: list[Path]) -> None:
     failures: list[str] = []
     for wav in p501_annex_d:
         band = _band_of(wav)
-        frames, info = read_wav(wav)
-        asl, _ = _measure(frames[:, 0], info.sample_rate, band)
+        frames, rate = sf.read(wav, always_2d=True)
+        asl, _ = _measure(frames[:, 0], rate, band)
         if abs(asl - EXPECTED_ASL_DB) > TOLERANCE_DB:
             failures.append(f"{wav.name} [{band}]: {asl:+.3f} dB (expected {EXPECTED_ASL_DB})")
     assert not failures, "ASL out of tolerance:\n  " + "\n  ".join(failures)
@@ -86,16 +90,14 @@ def test_p501_annex_d_scaling_linearity(p501_annex_d: list[Path], offset_db: flo
     failures: list[str] = []
     for wav in p501_annex_d:
         band = _band_of(wav)
-        frames, info = read_wav(wav)
-        base, _ = _measure(frames[:, 0], info.sample_rate, band)
+        frames, rate = sf.read(wav, always_2d=True)
+        base, _ = _measure(frames[:, 0], rate, band)
         scaled = frames[:, 0] * factor
         if over_range:
             assert np.abs(scaled).max() > 1.0, f"{wav.name}: expected over-range samples"
-        asl, _ = _measure(scaled, info.sample_rate, band, auto_calibrate=over_range)
+        asl, _ = _measure(scaled, rate, band, auto_calibrate=over_range)
         if abs((asl - base) - offset_db) > LINEARITY_TOLERANCE_DB:
-            failures.append(
-                f"{wav.name} [{band}] {offset_db:+g} dB: {asl:+.3f} - base {base:+.3f} = {asl - base:+.3f} (expected {offset_db:+g})"
-            )
+            failures.append(f"{wav.name} [{band}] {offset_db:+g} dB: {asl:+.3f} - base {base:+.3f} = {asl - base:+.3f} (expected {offset_db:+g})")
     assert not failures, "scaled ASL not linear:\n  " + "\n  ".join(failures)
 
 
@@ -107,14 +109,14 @@ def test_p501_annex_d_auto_calibration_triggers_on_over_range(p501_annex_d: list
     """
     wav = p501_annex_d[0]
     band = _band_of(wav)
-    frames, info = read_wav(wav)
-    base, _ = _measure(frames[:, 0], info.sample_rate, band)
+    frames, rate = sf.read(wav, always_2d=True)
+    base, _ = _measure(frames[:, 0], rate, band)
     scaled = frames[:, 0] * 10.0 ** (60.0 / 20.0)
     assert np.abs(scaled).max() > 1.0
 
-    prefilter = PreFilter(band, float(info.sample_rate))
+    prefilter = PreFilter(band, float(rate))
     filtered = prefilter.process(scaled.astype("float32", copy=False))
-    meter = ActiveSpeechLevelMeter(sample_rate=float(info.sample_rate), bit_depth=32, max_amplitude=1.0, auto_calibrate=True)
+    meter = ActiveSpeechLevelMeter(sample_rate=float(rate), bit_depth=32, max_amplitude=1.0, auto_calibrate=True)
     for k in range(0, len(filtered), 65536):
         meter.process_block(filtered[k : k + 65536])
     result = meter.finish()
@@ -133,10 +135,70 @@ def test_p501_corpus_deviation_report(p501_annex_d: list[Path]) -> None:
     """Print the per-file deviation to confirm the tolerance choice."""
     for wav in p501_annex_d:
         band = _band_of(wav)
-        frames, info = read_wav(wav)
-        asl, activity = _measure(frames[:, 0], info.sample_rate, band)
+        frames, rate = sf.read(wav, always_2d=True)
+        asl, activity = _measure(frames[:, 0], rate, band)
         deviation = asl - EXPECTED_ASL_DB
-        print(f"{wav.name} [{band}] fs={info.sample_rate}: ASL {asl:+.3f} dB, dev {deviation:+.3f} dB, activity {activity * 100:.1f}%")
+        print(f"{wav.name} [{band}] fs={rate}: ASL {asl:+.3f} dB, dev {deviation:+.3f} dB, activity {activity * 100:.1f}%")
+
+
+# ---------------------------------------------------------------------------
+# Suite 3: end-to-end CLI — measure/calibrate on the real corpus
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.network
+def test_p501_annex_d_cli_measure_json(p501_annex_d: list[Path], tmp_path: Path) -> None:
+    """`p56-asl measure --format json --pre-filter <band>` must report
+    −26.0 dBov (corpus tolerance) for every Annex D file.
+    """
+    runner = CliRunner()
+    failures: list[str] = []
+    for wav in p501_annex_d:
+        band = _band_of(wav)
+        result = runner.invoke(app, ["measure", str(wav), "--pre-filter", band, "--format", "json"])
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        assert payload["pre_filter"] == band
+        assert payload["results"], f"{wav.name}: no results"
+        for r in payload["results"]:
+            if abs(r["active_speech_level_db"] - EXPECTED_ASL_DB) > TOLERANCE_DB:
+                failures.append(
+                    f"{wav.name} [{band}] ch{r['channel']}: {r['active_speech_level_db']:+.3f} dB (expected {EXPECTED_ASL_DB})"
+                )
+    assert not failures, "CLI ASL out of tolerance:\n  " + "\n  ".join(failures)
+
+
+@pytest.mark.network
+@pytest.mark.parametrize("gain_db", [-30.0, 30.0], ids=["-30dB", "+30dB"])
+def test_p501_annex_d_cli_calibrate_measure_linearity(p501_annex_d: list[Path], tmp_path: Path, gain_db: float) -> None:
+    """`p56-asl calibrate <in> <gain> <out>` followed by `measure` must
+    reproduce baseline + gain (±0.1 dB) through the real CLI pipeline.
+
+    The corpus is PCM_16; over-range samples (|x| > 1) are only
+    representable in float WAVs, so +30 dB writes through a FLOAT
+    intermediate — exercising the file-level auto-calibration path.
+    """
+    runner = CliRunner()
+    wav = p501_annex_d[0]
+    band = _band_of(wav)
+
+    src = tmp_path / "src.wav"
+    frames, rate = sf.read(wav, always_2d=True)
+    sf.write(src, frames, rate, subtype="FLOAT")
+
+    base_result = runner.invoke(app, ["measure", str(src), "--pre-filter", band, "--format", "json"])
+    assert base_result.exit_code == 0, base_result.output
+    base = json.loads(base_result.output)["results"][0]["active_speech_level_db"]
+
+    out = tmp_path / "scaled.wav"
+    result = runner.invoke(app, ["calibrate", str(src), f"{gain_db:+g}", str(out), "--pre-filter", band])
+    assert result.exit_code == 0, result.output
+
+    after_result = runner.invoke(app, ["measure", str(out), "--pre-filter", band, "--format", "json"])
+    assert after_result.exit_code == 0, after_result.output
+    after = json.loads(after_result.output)["results"][0]["active_speech_level_db"]
+
+    assert after == pytest.approx(base + gain_db, abs=LINEARITY_TOLERANCE_DB)
 
 
 def _band_of(path: Path) -> str:

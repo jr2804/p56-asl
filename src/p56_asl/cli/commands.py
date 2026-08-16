@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import soundfile as sf
 import typer
 
 from p56_asl import ActiveSpeechLevelMeter, PreFilter, Resampler
-from p56_asl.cli.app import app
 from p56_asl.cli.args import (
     ChannelsCalibrateOption,
     ChannelsOption,
@@ -27,15 +27,20 @@ from p56_asl.cli.args import (
     parse_channels,
     parse_db,
 )
-from p56_asl.wav import WavInfo, read_wav, write_wav
 
 # Processing block size for streaming file operations (frames per step).
 _BLOCK = 65536
 
 
-@app.command(name="measure")
-@app.command(name="calc", hidden=True, help="Alias for measure.")
-@app.command(name="calculate", hidden=True, help="Alias for measure.")
+def register(app: typer.Typer) -> None:
+    """Register the CLI commands on `app` (called from app.py after `app` exists)."""
+    app.command(name="measure")(measure)
+    app.command(name="calc", hidden=True, help="Alias for measure.")(measure)
+    app.command(name="calculate", hidden=True, help="Alias for measure.")(measure)
+    app.command(name="calibrate", context_settings={"ignore_unknown_options": True})(calibrate)
+    app.command(name="scale", hidden=True, help="Alias for calibrate.", context_settings={"ignore_unknown_options": True})(calibrate)
+
+
 def measure(
     input_path: InputPathArg,
     fs: FsOption = None,
@@ -49,8 +54,8 @@ def measure(
     frames, info, selected = _read_selection(input_path, time_start, time_duration, channels)
     if band is not None and band.upper() not in {"NB", "SWB", "FB"}:
         raise typer.BadParameter(f"--pre-filter must be NB, SWB or FB, got {band!r}")
-    rate, prefilter = _pipeline(info, fs, band)
-    data = _resampled_channels(frames, info.sample_rate, rate, selected)
+    rate, prefilter = _pipeline(info.samplerate, fs, band)
+    data = _resampled_channels(frames, info.samplerate, rate, selected)
 
     results: list[dict[str, Any]] = []
     for k, c in enumerate(selected):
@@ -106,8 +111,6 @@ def measure(
         typer.echo(f"  Samples:             {r['sample_count']}")
 
 
-@app.command(name="calibrate", context_settings={"ignore_unknown_options": True})
-@app.command(name="scale", hidden=True, help="Alias for calibrate.", context_settings={"ignore_unknown_options": True})
 def calibrate(
     input_path: InputPathArg,
     gain_db: GainDbArg,
@@ -124,9 +127,9 @@ def calibrate(
         raise typer.BadParameter(f"--pre-filter must be NB, SWB or FB, got {band!r}")
     gain = parse_db(gain_db)
     factor = 10.0 ** (gain / 20.0)
-    rate, prefilter = _pipeline(info, fs, band)
+    rate, prefilter = _pipeline(info.samplerate, fs, band)
 
-    if rate == info.sample_rate:
+    if rate == info.samplerate:
         # same rate: scale (and optionally pre-filter) selected channels
         out = frames.copy()
         for c in selected:
@@ -139,7 +142,7 @@ def calibrate(
         # rate change applies to the whole file: resample every channel
         # (unselected pass through the resampler unchanged, then the
         # selected ones are pre-filtered and scaled)
-        out = _resampled_channels(frames, info.sample_rate, rate, list(range(info.channels)))
+        out = _resampled_channels(frames, info.samplerate, rate, list(range(info.channels)))
         for c in selected:
             ch = out[:, c]
             if prefilter is not None:
@@ -148,16 +151,7 @@ def calibrate(
             out[:, c] = ch * factor
 
     dst = output_path if output_path is not None else input_path
-    write_wav(
-        dst,
-        out,
-        WavInfo(
-            sample_rate=rate,
-            channels=info.channels,
-            bit_depth=info.bit_depth,
-            is_float=info.is_float,
-        ),
-    )
+    sf.write(dst, out, rate, subtype=info.subtype)
     typer.echo(f"Calibrated {len(selected)} channel(s) by {gain:+.2f} dB -> {dst}")
 
 
@@ -166,16 +160,17 @@ def _read_selection(
     time_start: float,
     time_duration: float | None,
     channels: str | None,
-) -> tuple[np.ndarray, WavInfo, list[int]]:
+) -> tuple[np.ndarray, Any, list[int]]:
     """Reads a WAV file applying time and channel selection.
 
     Returns `(frames, info, selected)` where `frames` is the full
-    (time-selected) multi-channel array and `selected` holds 0-indexed
-    selected channel indices.
+    (time-selected) multi-channel array, `info` is the soundfile header
+    info, and `selected` holds 0-indexed selected channel indices.
     """
-    frames, info = read_wav(path)
+    frames, rate = sf.read(path, always_2d=True)
+    info = sf.info(path)
     n = len(frames)
-    i0 = max(0, int(round(time_start * info.sample_rate)))
+    i0 = max(0, int(round(time_start * rate)))
     if i0 >= n:
         msg = f"--time-start {time_start}s is beyond the end of file ({n} frames)"
         raise typer.BadParameter(msg)
@@ -183,7 +178,7 @@ def _read_selection(
     if time_duration is not None:
         if time_duration < 0:
             raise typer.BadParameter(f"--time-duration must be >= 0, got {time_duration}")
-        i1 = min(n, i0 + int(round(time_duration * info.sample_rate)))
+        i1 = min(n, i0 + int(round(time_duration * rate)))
     frames = frames[i0:i1]
     try:
         selected = parse_channels(channels, info.channels)
@@ -194,9 +189,9 @@ def _read_selection(
     return frames, info, selected
 
 
-def _pipeline(info: WavInfo, fs: int | None, band: str | None) -> tuple[int, PreFilter | None]:
+def _pipeline(source_rate: int, fs: int | None, band: str | None) -> tuple[int, PreFilter | None]:
     """Builds (processing rate, pre-filter) for the CLI options."""
-    rate = fs if fs is not None else info.sample_rate
+    rate = fs if fs is not None else source_rate
     if rate <= 0:
         raise typer.BadParameter(f"--fs must be positive, got {rate}")
     prefilter = PreFilter(band, float(rate)) if band else None

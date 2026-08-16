@@ -6,6 +6,8 @@ from importlib.metadata import version
 
 import typer
 
+from p56_asl.cli import commands
+
 _DESC = (
     "An extended version of the ITU-T Rec. P.56 Active Speech Level (ASL). "
     "Complies with reference C-implementation but re-implemented in Rust and MIT-licensed."
@@ -18,9 +20,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-# Import commands after `app` exists to register them (import at module
-# top would create a circular import: commands imports app from here).
-from p56_asl.cli import commands  # noqa: E402, F401
+# Register the CLI commands now that `app` exists (no circular import: commands
+# no longer imports app at module level).
+commands.register(app)
 
 
 @app.callback(invoke_without_command=True)

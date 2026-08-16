@@ -13,13 +13,6 @@ import typer
 APP_NAME_UPPERCASE = "P56_ASL"
 
 
-class OutputFormat(StrEnum):
-    """Output format for `measure`."""
-
-    TEXT = "text"
-    JSON = "json"
-
-
 # --- Typer parameter type aliases (single source of truth for commands.py) ---
 
 InputPathArg = Annotated[Path, typer.Argument(help="Input WAV file.", exists=True, readable=True)]
@@ -53,6 +46,15 @@ ChannelsCalibrateOption = Annotated[
         help="Channels to calibrate: 1-indexed int or comma list. Unselected channels are copied unchanged. Default: all.",
     ),
 ]
+
+
+class OutputFormat(StrEnum):
+    """Output format for `measure`."""
+
+    TEXT = "text"
+    JSON = "json"
+
+
 OutputFormatOption = Annotated[OutputFormat, typer.Option("--format", "-f", help="Output format.")]
 
 

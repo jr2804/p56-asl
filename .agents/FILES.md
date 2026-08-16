@@ -16,7 +16,7 @@ Kept compact — agents hallucinate less when they know where definitions live.
 | Package source root    | `src/p56_asl/`  | `__init__.py`, `__about__.py` (version)         |
 | Rust core              | `src/*.rs`                                                      | `lib.rs` (PyO3), `prefilter.rs`, `resample.rs`, `actlevel.rs`, `filter.rs`, `histogram.rs`, `params.rs`; compiled to `p56_asl._native` (stubs: `src/p56_asl/_native.pyi`) |
 | CLI entry points       | `src/p56_asl/cli/`            | `app.py` (Typer app), `args.py`, `commands.py`  |
-| WAV I/O (CLI)          | `src/p56_asl/wav.py`                                           | `read_wav`, `write_wav`, `WavInfo` (PCM 8/16/24/32-bit + IEEE float 32/64) |
+| WAV I/O (CLI)          | `soundfile` package (pyproject deps)                           | `sf.read`, `sf.write`, `sf.info` — the only WAV I/O allowed in Python |
 | Docs pages             | `docs/`                                                        | `reference/api.md` (mkdocstrings), `reference/cli.md`, `reference/asl-method.md`, `reference/prefilter-bands.md`; nav in `zensical.toml` |
 | Test suite             | `tests/`                                                        | `test_*.py`, `conftest.py` (network tests: `network` marker, download cache `tests/test-cache/`) |
 | Project metadata       | `pyproject.toml`                                                | `[project]`, `[tool.pytest.ini_options]`        |
