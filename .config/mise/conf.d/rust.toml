@@ -1,0 +1,26 @@
+# Rust core tasks (cargo). The Python-side quality tasks live in
+# format.toml / lint.toml / quality.toml.
+
+[tasks.cargo-check]
+description = "Check the Rust crate compiles"
+run = "uv run cargo check"
+
+[tasks.cargo-test]
+description = "Run Rust unit tests"
+run = "uv run cargo test"
+
+[tasks.cargo-lint]
+description = "Lint Rust code with clippy (deny warnings)"
+run = "uv run cargo clippy --all-targets --all-features -- -D warnings"
+
+[tasks.cargo-fmt]
+description = "Format Rust sources with rustfmt"
+run = "uv run cargo fmt --all"
+
+[tasks.cargo-fmt-check]
+description = "Verify Rust sources are formatted"
+run = "uv run cargo fmt --all --check"
+
+[tasks.rust-dev]
+description = "Build the native extension into the venv (editable)"
+run = "uv run maturin develop"

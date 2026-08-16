@@ -26,7 +26,8 @@ def _rows(name: str) -> list[dict[str, str]]:
 
 def _run(cmd: list[str]) -> None:
     print(f"$ {' '.join(cmd)}")
-    subprocess.run(cmd, check=False)
+    # Dev-feature installers are trusted inputs from this repo's config.
+    subprocess.run(cmd, check=False)  # noqa: S603
 
 
 def add_mcp_servers(agent: str) -> None:

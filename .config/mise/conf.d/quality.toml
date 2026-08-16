@@ -13,6 +13,9 @@ depends = [
   "format",
   "format-md",
   "docs",
+  "cargo-test",
+  "cargo-lint",
+  "cargo-fmt-check",
 ]
 
 [tasks.clean]
