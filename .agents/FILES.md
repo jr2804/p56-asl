@@ -32,5 +32,8 @@ Kept compact — agents hallucinate less when they know where definitions live.
 - **Python package** (`package_slug`): snake_case (`my_project`)
 - **Layout**: `src/p56_asl/`
 - **Test files**: `test_<module>.py`
+- **Test data** (`tests/data/`): `speech_*.wav` inputs and `*.log.ref` sv56demo
+  baseline logs are committed; sv56demo raw outputs (`*.ref`, `*.nrm`, `*.ltl`,
+  `voice_24.src`, `voice_32.src`) are gitignored — regenerable via `ref/sv56demo`
 - **Template files** (in source template): `filename.ext.jinja` — the `.jinja`
   suffix is stripped on generation
