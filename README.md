@@ -45,7 +45,18 @@ mise all        # test + lint + format in one pass
 uv run p56-asl --help         # app/script entry
 uv run -m p56_asl --help      # module entry
 uv run p56-asl --version      # show version
+
+# Measure the active speech level (aliases: calc, calculate)
+uv run p56-asl measure input.wav
+uv run p56-asl measure input.wav --pre-filter nb --format json
+uv run p56-asl measure input.wav --fs 16000 --channels "1, 2" --time-start 0.5
+
+# Calibrate by a dB gain (alias: scale); no sign means +
+uv run p56-asl calibrate input.wav 3.01 output.wav   # +3.01 dB
+uv run p56-asl calibrate input.wav -3.01             # in place, -3.01 dB
 ```
+
+See `docs/reference/cli.md` for all options.
 
 ## Development
 

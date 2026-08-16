@@ -13,6 +13,7 @@ nav = [
     { "License" = "license.md" },
   ] },
   { "API reference" = "reference/api.md" },
+  { "CLI reference" = "reference/cli.md" },
   { "ASL method" = "reference/asl-method.md" },
   { "Pre-filter bands" = "reference/prefilter-bands.md" },
   { "Development" = [
