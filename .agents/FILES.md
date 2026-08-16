@@ -18,7 +18,7 @@ Kept compact — agents hallucinate less when they know where definitions live.
 | CLI entry points       | `src/p56_asl/cli/`            | `app.py` (Typer app), `args.py`, `commands.py`  |
 | WAV I/O (CLI)          | `src/p56_asl/wav.py`                                           | `read_wav`, `write_wav`, `WavInfo` (PCM 8/16/24/32-bit + IEEE float 32/64) |
 | Docs pages             | `docs/`                                                        | `reference/api.md` (mkdocstrings), `reference/cli.md`, `reference/asl-method.md`, `reference/prefilter-bands.md`; nav in `zensical.toml` |
-| Test suite             | `tests/`                                                        | `test_*.py`, `conftest.py`                      |
+| Test suite             | `tests/`                                                        | `test_*.py`, `conftest.py` (network tests: `network` marker, download cache `tests/test-cache/`) |
 | Project metadata       | `pyproject.toml`                                                | `[project]`, `[tool.pytest.ini_options]`        |
 | Linter/formatter       | `ruff.toml`                                                     | Ruff rule selection, line length                |
 | Type checker           | `ty.toml`                                                       | ty strictness                                   |

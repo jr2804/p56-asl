@@ -101,7 +101,26 @@ impl Histogram {
 
     /// Scales all thresholds by `factor` (used by the auto-calibration
     /// mode when the signal peak exceeds `max_amplitude`).
+    ///
+    /// When `factor` is an exact power of two the geometric grid maps
+    /// onto itself (`c_new[j] = c_old[j + k]` for `factor = 2^k`), so the
+    /// accumulated activity counts and hangover counters shift down by
+    /// `k` bins to stay attached to their original threshold levels. The
+    /// top `k` bins (absolute levels above the old grid) start fresh.
     pub fn scale_thresholds(&mut self, factor: f64) {
+        let k = factor.log2().round();
+        if k >= 1.0 && (factor / 2.0_f64.powf(k) - 1.0).abs() < 1e-9 {
+            let k = k as usize;
+            let len = self.thresholds.len();
+            self.activity.copy_within(k..len, 0);
+            self.hangover.copy_within(k..len, 0);
+            for j in len - k..len {
+                self.activity[j] = 0;
+                // Saturated hangover = "not recently active", matching a
+                // fresh meter (hang < I is false for any realistic I).
+                self.hangover[j] = u64::MAX;
+            }
+        }
         for t in &mut self.thresholds {
             *t *= factor;
         }

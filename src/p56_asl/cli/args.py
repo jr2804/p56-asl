@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 from enum import StrEnum
+from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -16,6 +18,42 @@ class OutputFormat(StrEnum):
 
     TEXT = "text"
     JSON = "json"
+
+
+# --- Typer parameter type aliases (single source of truth for commands.py) ---
+
+InputPathArg = Annotated[Path, typer.Argument(help="Input WAV file.", exists=True, readable=True)]
+GainDbArg = Annotated[str, typer.Argument(help="Gain in dB, e.g. 3.01, +3.01 or -3.01 (no sign = +).")]
+OutputPathArg = Annotated[Path | None, typer.Argument(help="Output WAV file; omitted: calibrate in place.")]
+FsOption = Annotated[
+    int | None,
+    typer.Option("--fs", min=1, help="Resample to this sampling rate (Hz) before analysis."),
+]
+FsCalibrateOption = Annotated[
+    int | None,
+    typer.Option("--fs", min=1, help="Resample to this sampling rate (Hz) before calibration and writing."),
+]
+PreFilterOption = Annotated[
+    str | None,
+    typer.Option("--pre-filter", case_sensitive=False, help="P.56 protection pre-filter band: NB, SWB or FB."),
+]
+TimeStartOption = Annotated[float, typer.Option("--time-start", min=0.0, help="Start time (s).")]
+TimeDurationOption = Annotated[
+    float | None,
+    typer.Option("--time-duration", min=0.0, help="Duration (s); default: to EOF."),
+]
+ChannelsOption = Annotated[
+    str | None,
+    typer.Option("--channels", help="Channels to analyze: 1-indexed int or comma list (e.g. 1,2). Default: all."),
+]
+ChannelsCalibrateOption = Annotated[
+    str | None,
+    typer.Option(
+        "--channels",
+        help="Channels to calibrate: 1-indexed int or comma list. Unselected channels are copied unchanged. Default: all.",
+    ),
+]
+OutputFormatOption = Annotated[OutputFormat, typer.Option("--format", "-f", help="Output format.")]
 
 
 def parse_channels(value: str | None, max_channels: int) -> list[int] | None:

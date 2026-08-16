@@ -96,6 +96,12 @@ impl ActiveSpeechLevelMeter {
         &self.params
     }
 
+    /// Returns the current `max_amplitude` — the configured value
+    /// possibly adapted by auto-calibration.
+    pub fn max_amplitude(&self) -> f64 {
+        self.max_amplitude
+    }
+
     /// Resets all accumulated state. Configuration (including a calibrated
     /// `max_amplitude`) is kept.
     pub fn reset(&mut self) {
@@ -153,19 +159,21 @@ impl ActiveSpeechLevelMeter {
         // Process 2: temporal smoothing (blockwise in one pass).
         self.filter.process(&abs_samples, &mut envelope);
 
+        // Auto-calibrate *before* threshold counting so the block that
+        // triggers the scale-up is measured on the corrected grid.
+        self.calibrate_if_needed(block);
+
         // Process 3: threshold counting on the envelope.
         for &q in &envelope {
             self.histogram.count(q, self.hangover_limit);
         }
-
-        self.calibrate_if_needed(block);
         Ok(())
     }
 
     /// Extended auto-calibration: if the block's peak exceeds the current
     /// `max_amplitude`, double `max_amplitude` (and the thresholds with it)
-    /// until the peak fits. Open design point — semantics pending the
-    /// dedicated discussion.
+    /// until the peak fits. Called *before* threshold counting so the
+    /// triggering block is measured on the corrected grid.
     fn calibrate_if_needed(&mut self, block_len: usize) {
         if !self.params.auto_calibrate || self.max <= self.max_amplitude {
             return;
@@ -177,6 +185,9 @@ impl ActiveSpeechLevelMeter {
         if factor > 1.0 {
             self.max_amplitude *= factor;
             self.histogram.scale_thresholds(factor);
+            // Reset peak trackers against the new reference so the next
+            // blocks are compared on the corrected scale.
+            self.max = self.max_p.max(-self.max_n);
         }
         let _ = block_len;
     }
@@ -408,6 +419,47 @@ mod tests {
         m.process_block(&block).unwrap();
         assert_eq!(m.max_amplitude, 4.0); // 1 → 2 → 4, then 2.5 < 4
                                           // Thresholds were scaled by the same factor.
+        assert_eq!(m.histogram.thresholds()[0], 2.0_f64.powi(-15) * 4.0);
+    }
+
+    #[test]
+    fn auto_calibration_uses_scaled_grid_for_triggering_block() {
+        // A block whose envelope exceeds max_amplitude must be counted on
+        // the *scaled* grid, not the stale one. With a constant 0.5-amplitude
+        // (envelope 0.5) and max_amplitude 1.0, no calibration fires and the
+        // lowest threshold c[0] = 2^-15 still gets counted. Then a single
+        // sample of 2.5 forces one doubling (1 → 2), and the histogram's
+        // activity is measured against the new grid.
+        let mut m = ActiveSpeechLevelMeter::new(Params {
+            sample_rate: 8_000.0,
+            bit_depth: 16,
+            block_size: 256,
+            max_amplitude: 1.0,
+            auto_calibrate: true,
+        })
+        .unwrap();
+        let mut block = [0.0f32; 256];
+        for (k, s) in block.iter_mut().enumerate() {
+            *s = 0.5;
+            let _ = k;
+        }
+        m.process_block(&block).unwrap();
+        // Pre-calibration block: no scale-up, activity recorded on base grid.
+        assert_eq!(m.max_amplitude, 1.0);
+        assert!(m.histogram.activity()[0] > 0);
+
+        // Now a peak of 2.5 forces max_amplitude → 4.0 (factor 2 twice:
+        // the 0.5 tail of the previous block keeps `max` at 0.5, but the
+        // envelope-filtered peak from this block plus the 2.5 samples
+        // themselves drive `max` to 2.5 → 1 → 2 → 4).
+        let mut peak_block = [0.0f32; 256];
+        for s in peak_block.iter_mut() {
+            *s = 2.5;
+        }
+        m.process_block(&peak_block).unwrap();
+        assert_eq!(m.max_amplitude, 4.0);
+        // The triggering block's envelope (2.5) must have been counted
+        // against the scaled thresholds (c[0] = 2^-13), not the original.
         assert_eq!(m.histogram.thresholds()[0], 2.0_f64.powi(-15) * 4.0);
     }
 }

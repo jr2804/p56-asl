@@ -86,8 +86,16 @@ impl PyActiveSpeechLevelMeter {
         max_amplitude: f64,
         auto_calibrate: bool,
     ) -> PyResult<Self> {
+        // When the input rate is below 16 kHz the signal is resampled to
+        // the 16 kHz operating rate, so the envelope filter and hangover
+        // must be timed for 16 kHz — not the (lower) input rate.
+        let effective_rate = if sample_rate < resample::TARGET_RATE as f64 {
+            resample::TARGET_RATE as f64
+        } else {
+            sample_rate
+        };
         let params = params::Params {
-            sample_rate,
+            sample_rate: effective_rate,
             bit_depth,
             block_size,
             max_amplitude,
@@ -186,7 +194,7 @@ impl PyActiveSpeechLevelMeter {
 
     #[getter]
     fn max_amplitude(&self) -> f64 {
-        self.inner.params().max_amplitude
+        self.inner.max_amplitude()
     }
 
     #[getter]

@@ -14,30 +14,9 @@ from p56_asl.wav import WavInfo, read_wav, write_wav
 
 pytest.importorskip("p56_asl._native", reason="native extension not built")
 
-runner = CliRunner()
-
 _FS = 16_000
 
-
-def _speech(n: int = 48_000, fs: int = _FS, channels: int = 1, seed: int = 0) -> np.ndarray:
-    """Deterministic speech-like multi-channel signal (envelope + noise)."""
-    rng = np.random.default_rng(seed)
-    t = np.arange(n) / fs
-    env = 0.5 * (1 + np.sin(2 * np.pi * 3 * t))  # slow syllable envelope
-    sig = env * rng.standard_normal(n)
-    sig = sig / np.abs(sig).max() * 0.25  # headroom for +6 dB calibration
-    if channels == 1:
-        return sig[:, np.newaxis]
-    ch2 = np.roll(sig, n // 3) * 0.5  # decorrelated second channel
-    return np.column_stack([sig, ch2])
-
-
-def _write(path: Path, sig: np.ndarray, fs: int = _FS, bit_depth: int = 16) -> None:
-    write_wav(
-        path,
-        sig,
-        WavInfo(sample_rate=fs, channels=sig.shape[1], bit_depth=bit_depth, is_float=False),
-    )
+runner = CliRunner()
 
 
 def test_measure_text(tmp_path: Path) -> None:
@@ -295,3 +274,24 @@ def test_calibrate_time_window(tmp_path: Path) -> None:
     b, info = read_wav(dst)
     assert info.channels == 2
     assert len(b) == _FS // 2
+
+
+def _speech(n: int = 48_000, fs: int = _FS, channels: int = 1, seed: int = 0) -> np.ndarray:
+    """Deterministic speech-like multi-channel signal (envelope + noise)."""
+    rng = np.random.default_rng(seed)
+    t = np.arange(n) / fs
+    env = 0.5 * (1 + np.sin(2 * np.pi * 3 * t))  # slow syllable envelope
+    sig = env * rng.standard_normal(n)
+    sig = sig / np.abs(sig).max() * 0.25  # headroom for +6 dB calibration
+    if channels == 1:
+        return sig[:, np.newaxis]
+    ch2 = np.roll(sig, n // 3) * 0.5  # decorrelated second channel
+    return np.column_stack([sig, ch2])
+
+
+def _write(path: Path, sig: np.ndarray, fs: int = _FS, bit_depth: int = 16) -> None:
+    write_wav(
+        path,
+        sig,
+        WavInfo(sample_rate=fs, channels=sig.shape[1], bit_depth=bit_depth, is_float=False),
+    )

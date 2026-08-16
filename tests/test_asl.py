@@ -19,6 +19,9 @@ from p56_asl import ActiveSpeechLevelMeter, Measurement
 pytest.importorskip("p56_asl._native", reason="native extension not built")
 
 
+_FP = r"(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)"
+
+
 # ---------------------------------------------------------------------------
 # Fixture parsing
 # ---------------------------------------------------------------------------
@@ -38,7 +41,11 @@ class RefLog:
     activity_factor_percent: float
 
 
-_FP = r"(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)"
+@dataclass(frozen=True)
+class ConformanceCase:
+    wav: str
+    log: str
+    bit_depth: int
 
 
 def parse_ref_log(path: Path) -> RefLog:
@@ -64,24 +71,6 @@ def parse_ref_log(path: Path) -> RefLog:
         active_speech_level_db=field("Active speech level"),
         activity_factor_percent=field("Activity factor"),
     )
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def process_file(meter: ActiveSpeechLevelMeter, samples: np.ndarray) -> None:
-    """Feed a full file into the meter blockwise (block_size chunks)."""
-    block = meter.block_size
-    for start in range(0, len(samples), block):
-        meter.process_block(samples[start : start + block])
-
-
-def measure(samples: np.ndarray, sample_rate: float, bit_depth: int, block_size: int = 256) -> Measurement:
-    meter = ActiveSpeechLevelMeter(sample_rate=sample_rate, bit_depth=bit_depth, block_size=block_size)
-    process_file(meter, samples)
-    return meter.finish()
 
 
 # ---------------------------------------------------------------------------
@@ -162,9 +151,9 @@ def test_integer_normalization(dtype: type, bit_depth: int) -> None:
 def test_rejects_non_numpy_input() -> None:
     meter = ActiveSpeechLevelMeter()
     with pytest.raises(ValueError, match="numpy"):
-        meter.process_block([0.0] * 16)  # type: ignore[arg-type]
+        meter.process_block([0.0] * 16)  # type: ignore
     with pytest.raises(ValueError, match="numpy"):
-        meter.process_block(0.0 for _ in range(16))  # type: ignore[arg-type]
+        meter.process_block(0.0 for _ in range(16))  # type: ignore
 
 
 def test_rejects_2d_array() -> None:
@@ -207,6 +196,12 @@ def test_resampling_matches_16k_reference(fs: int) -> None:
     assert r_low.active_speech_level_db == pytest.approx(expected, abs=0.2)
 
 
+def measure(samples: np.ndarray, sample_rate: float, bit_depth: int, block_size: int = 256) -> Measurement:
+    meter = ActiveSpeechLevelMeter(sample_rate=sample_rate, bit_depth=bit_depth, block_size=block_size)
+    process_file(meter, samples)
+    return meter.finish()
+
+
 def test_resampled_sample_count() -> None:
     """Output length must be ~ceil(input * 16000 / rate)."""
     fs = 8_000
@@ -217,6 +212,18 @@ def test_resampled_sample_count() -> None:
     process_file(meter, x)
     result = meter.finish()
     assert result.sample_count == pytest.approx(n * 2, abs=64)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def process_file(meter: ActiveSpeechLevelMeter, samples: np.ndarray) -> None:
+    """Feed a full file into the meter blockwise (block_size chunks)."""
+    block = meter.block_size
+    for start in range(0, len(samples), block):
+        meter.process_block(samples[start : start + block])
 
 
 # ---------------------------------------------------------------------------
@@ -238,13 +245,6 @@ def _load_wav(path: Path) -> tuple[int, np.ndarray]:
         return rate, data
     msg = f"unsupported wav dtype {data.dtype} in {path}"
     raise ValueError(msg)
-
-
-@dataclass(frozen=True)
-class ConformanceCase:
-    wav: str
-    log: str
-    bit_depth: int
 
 
 CONFORMANCE_CASES = [

@@ -40,6 +40,35 @@ class WavInfo:
     is_float: bool
 
 
+def read_wav(path: str | Path) -> tuple[np.ndarray, WavInfo]:
+    """Reads a WAV file; returns ``(frames, info)``.
+
+    ``frames`` is float64, shape ``(n_samples, channels)``, normalized
+    to [-1, 1] for integer data, unchanged for float data.
+    """
+    raw = Path(path).read_bytes()
+    _, body, info = _read_chunks(memoryview(raw))
+    n_ch = info.channels
+    if info.is_float:
+        frames = np.frombuffer(body, dtype=f"<f{info.bit_depth // 8}")
+    else:
+        if info.bit_depth == 8:
+            frames = np.frombuffer(body, dtype=np.uint8).astype(np.int16) - 128
+        elif info.bit_depth == 16:
+            frames = np.frombuffer(body, dtype="<i2").astype(np.int32)
+        elif info.bit_depth == 24:
+            b = np.frombuffer(body, dtype=np.uint8).reshape(-1, 3)
+            frames = b[:, 0].astype(np.int32) | (b[:, 1].astype(np.int32) << 8) | (b[:, 2].astype(np.int32) << 16)
+            # sign-extend from 24 to 32 bits
+            frames[frames >= 1 << 23] -= 1 << 24
+        else:  # 32
+            frames = np.frombuffer(body, dtype="<i4")
+        frames = frames / float(_INT_MAX[info.bit_depth])
+    if len(frames) % n_ch:
+        frames = frames[: len(frames) - (len(frames) % n_ch)]
+    return frames.reshape(-1, n_ch).astype(np.float64), info
+
+
 def _read_chunks(data: memoryview) -> tuple[bytes, memoryview, WavInfo]:
     """Parses RIFF chunks; returns (fmt_chunk, data_view, info)."""
     if data[:4] != b"RIFF" or data[8:12] != b"WAVE":
@@ -77,35 +106,6 @@ def _read_chunks(data: memoryview) -> tuple[bytes, memoryview, WavInfo]:
         msg = f"unsupported float size {bits}"
         raise ValueError(msg)
     return fmt_chunk, data_view, WavInfo(sample_rate, channels, bits, is_float)
-
-
-def read_wav(path: str | Path) -> tuple[np.ndarray, WavInfo]:
-    """Reads a WAV file; returns ``(frames, info)``.
-
-    ``frames`` is float64, shape ``(n_samples, channels)``, normalized
-    to [-1, 1] for integer data, unchanged for float data.
-    """
-    raw = Path(path).read_bytes()
-    _, body, info = _read_chunks(memoryview(raw))
-    n_ch = info.channels
-    if info.is_float:
-        frames = np.frombuffer(body, dtype=f"<f{info.bit_depth // 8}")
-    else:
-        if info.bit_depth == 8:
-            frames = np.frombuffer(body, dtype=np.uint8).astype(np.int16) - 128
-        elif info.bit_depth == 16:
-            frames = np.frombuffer(body, dtype="<i2").astype(np.int32)
-        elif info.bit_depth == 24:
-            b = np.frombuffer(body, dtype=np.uint8).reshape(-1, 3)
-            frames = b[:, 0].astype(np.int32) | (b[:, 1].astype(np.int32) << 8) | (b[:, 2].astype(np.int32) << 16)
-            # sign-extend from 24 to 32 bits
-            frames[frames >= 1 << 23] -= 1 << 24
-        else:  # 32
-            frames = np.frombuffer(body, dtype="<i4")
-        frames = frames / float(_INT_MAX[info.bit_depth])
-    if len(frames) % n_ch:
-        frames = frames[: len(frames) - (len(frames) % n_ch)]
-    return frames.reshape(-1, n_ch).astype(np.float64), info
 
 
 def write_wav(path: str | Path, frames: np.ndarray, info: WavInfo, *, clip: bool = True) -> None:
