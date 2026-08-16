@@ -66,3 +66,6 @@ skills-lock.json
 
 # debug artifacts
 *.pdb
+
+# mkdocs/zensical output
+site/

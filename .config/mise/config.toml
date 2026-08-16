@@ -33,6 +33,7 @@ rust = "latest"
 "github:gastownhall/beads" = "latest"
 "github:dolthub/dolt" = "latest"
 "pipx:beads-mcp" = "latest"
+"github:Dicklesworthstone/franken_ocr" = "v0.7.2"
 
 [settings.npm]
 package_manager = "bun"
