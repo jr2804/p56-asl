@@ -276,6 +276,27 @@ def test_calibrate_time_window(tmp_path: Path) -> None:
     assert len(b) == _FS // 2
 
 
+@pytest.mark.parametrize(
+    ("bit_depth", "is_float"),
+    [(8, False), (16, False), (24, False), (32, False), (32, True), (64, True)],
+    ids=["pcm8", "pcm16", "pcm24", "pcm32", "float32", "float64"],
+)
+def test_calibrate_dtype_roundtrip(tmp_path: Path, bit_depth: int, is_float: bool) -> None:
+    """Calibrate must preserve the file's dtype through read → scale → write."""
+    src = tmp_path / "in.wav"
+    dst = tmp_path / "out.wav"
+    _write(src, _speech(), bit_depth=bit_depth, is_float=is_float)
+    result = runner.invoke(app, ["calibrate", str(src), "-6.02", str(dst)])
+    assert result.exit_code == 0, result.output
+    a, info_a = read_wav(src)
+    b, info_b = read_wav(dst)
+    assert (info_b.bit_depth, info_b.is_float) == (bit_depth, is_float)
+    assert info_b.channels == info_a.channels
+    assert info_b.sample_rate == info_a.sample_rate
+    atol = {8: 1 / 64, 16: 1 / 4096, 24: 1 / 65536}.get(bit_depth, 1e-6)
+    np.testing.assert_allclose(b, a * 10.0 ** (-6.02 / 20.0), atol=atol)
+
+
 def _speech(n: int = 48_000, fs: int = _FS, channels: int = 1, seed: int = 0) -> np.ndarray:
     """Deterministic speech-like multi-channel signal (envelope + noise)."""
     rng = np.random.default_rng(seed)
@@ -289,9 +310,9 @@ def _speech(n: int = 48_000, fs: int = _FS, channels: int = 1, seed: int = 0) ->
     return np.column_stack([sig, ch2])
 
 
-def _write(path: Path, sig: np.ndarray, fs: int = _FS, bit_depth: int = 16) -> None:
+def _write(path: Path, sig: np.ndarray, fs: int = _FS, bit_depth: int = 16, is_float: bool = False) -> None:
     write_wav(
         path,
         sig,
-        WavInfo(sample_rate=fs, channels=sig.shape[1], bit_depth=bit_depth, is_float=False),
+        WavInfo(sample_rate=fs, channels=sig.shape[1], bit_depth=bit_depth, is_float=is_float),
     )
