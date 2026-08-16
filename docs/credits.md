@@ -5,5 +5,6 @@ hide:
 ---
 
 ```python exec="yes"
---8 < --"scripts/gen_credits.py"
+--8<-- "scripts/gen_credits.py"
+print(load_credits())
 ```

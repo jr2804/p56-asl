@@ -6,7 +6,10 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
+try:
+    ROOT = Path(__file__).parent.parent
+except NameError:  # executed via markdown-exec during docs build
+    ROOT = Path.cwd()
 
 
 def load_credits() -> str:
