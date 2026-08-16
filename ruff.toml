@@ -1,6 +1,6 @@
 
 unsafe-fixes = true
-exclude = [".venv", ".tmp", "build", "dist", "__pypackages__"]
+exclude = [".venv", ".tmp", "build", "dist", "__pypackages__", "docs"]  # docs: MyST snippet markers (--8<--) are not valid Python
 target-version = "py313"
 line-length = 160
 
@@ -55,6 +55,7 @@ ignore = [
     "ANN401",
     "PLR0912",  # too-many-branches
     "PLR0913",
+    "PLR0917",  # too-many-positional-arguments (Typer commands)
     "PLR2004", # magic value used in comparison
     "PT028",   # test function parameter has default argument
 ]

@@ -92,9 +92,7 @@ def test_prefilter_before_measurement() -> None:
     fs = 16_000
     t = np.arange(fs * 2, dtype=np.float64)
     # Strong low-frequency hum + speech-band tone.
-    x = (0.4 * np.sin(2 * np.pi * 50 * t / fs) + 0.2 * np.sin(2 * np.pi * 1000 * t / fs)).astype(
-        np.float32
-    )
+    x = (0.4 * np.sin(2 * np.pi * 50 * t / fs) + 0.2 * np.sin(2 * np.pi * 1000 * t / fs)).astype(np.float32)
 
     m_raw = ActiveSpeechLevelMeter(sample_rate=fs)
     m_raw.process_block(x)
