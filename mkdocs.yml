@@ -134,6 +134,9 @@ markdown_extensions:
         class: python
         validator: !!python/name:markdown_exec.validator
         formatter: !!python/name:markdown_exec.formatter
+      - name: math
+        class: arithmatex
+        format: !!python/name:pymdownx.arithmatex.fence_generic_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist:

@@ -14,9 +14,9 @@ correctly instead of saturating the analysis.
 The meter measures the smoothed envelope $q[n]$ against a geometric grid of
 thresholds:
 
-$$
+```math
 c_k = \frac{\text{max\_amplitude}}{2^k}, \qquad k = 1 \dots 23
-$$
+```
 
 The top threshold sits at `max_amplitude / 2`; each bin below it covers
 half the amplitude of the one above (−6.02 dB per bin). `max_amplitude`

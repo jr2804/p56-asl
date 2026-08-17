@@ -33,10 +33,10 @@ signal $x[n]$:
    with time constant $T = 0.03\ \mathrm{s}$. With
    $g = e^{-1/(f T)}$ for sampling rate $f$:
 
-   $$
+   ```math
    p[n] = g\,p[n-1] + (1 - g)\,|x[n]|, \qquad
    q[n] = g\,q[n-1] + (1 - g)\,p[n].
-   $$
+   ```
 3. **Process 3 — threshold histogram with hangover.** The envelope $q[n]$ is
    compared against a geometric progression of thresholds (each successive
    threshold half the previous, spanning the bit depth of the signal), and
@@ -57,17 +57,17 @@ speech level $L$ is the level $L_j$ of the signal computed with only the
 samples active at threshold $c_j$, chosen such that the margin between $L_j$
 and the threshold level itself satisfies
 
-$$
+```math
 L_j - 20\log_{10}(c_j) \geq M, \qquad M = 15.9\ \mathrm{dB}.
-$$
+```
 
 Among the thresholds meeting the margin criterion, the meter reports the one
 with the largest coverage (smallest $j$ meeting it), which yields the
 activity factor
 
-$$
+```math
 AF = \frac{N_{\text{active}}}{N_{\text{total}}}.
-$$
+```
 
 Silence (no threshold meets the margin) is reported as $-100\ \mathrm{dB}$.
 The following table collects the constants as fixed by the Recommendation
