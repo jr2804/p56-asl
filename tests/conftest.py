@@ -63,9 +63,7 @@ def measure_wav(path: Path, band: str | None = None) -> tuple[float, float, int]
         prefilter = PreFilter(band, rate)
         prefilter.reset()
         samples = prefilter.process(samples)
-    subtype = sf.info(path).subtype
-    bit_depth = 32 if subtype in ("FLOAT", "DOUBLE") else int(subtype.split("_")[1])
-    meter = ActiveSpeechLevelMeter(sample_rate=rate, bit_depth=bit_depth)
+    meter = ActiveSpeechLevelMeter(sample_rate=rate)
     for k in range(0, len(samples), 65536):
         meter.process_block(samples[k : k + 65536])
     result = meter.finish()

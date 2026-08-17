@@ -68,13 +68,6 @@ impl Resampler {
         })
     }
 
-    /// Number of input samples needed before rubato produces output
-    /// (diagnostic access).
-    #[allow(dead_code)]
-    pub fn chunk_size(&self) -> usize {
-        CHUNK_SIZE
-    }
-
     /// Feeds input samples; returns all 16 kHz output available so far in
     /// call order. May be empty until a full chunk accumulates.
     pub fn process(&mut self, samples: &[f32]) -> Result<Vec<f32>> {
@@ -151,6 +144,16 @@ impl Resampler {
         self.delivered += out.len();
         let _ = sent;
         Ok(out)
+    }
+
+    /// Resets the internal state; the resampler can be reused afterwards
+    /// (e.g. after a meter `reset()` between measurements).
+    pub fn reset(&mut self) {
+        self.resampler.reset();
+        self.pending.clear();
+        self.output_queue.clear();
+        self.flushed = false;
+        self.delivered = 0;
     }
 
     /// Configured input sampling rate in Hz.

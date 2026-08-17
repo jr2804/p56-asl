@@ -33,11 +33,11 @@ def test_invalid_sample_rate() -> None:
 def test_process_returns_float32() -> None:
     """process() returns a new float32 array; input is not modified."""
     pf = PreFilter("NB", 16_000)
-    x = np.zeros(1024, dtype=np.int16)
+    x = np.zeros(1024, dtype=np.float32)
     out = pf.process(x)
     assert out.dtype == np.float32
     assert out.shape == (1024,)
-    np.testing.assert_array_equal(x, np.zeros(1024, dtype=np.int16))
+    np.testing.assert_array_equal(x, np.zeros(1024, dtype=np.float32))
 
 
 def test_streaming_matches_one_shot() -> None:

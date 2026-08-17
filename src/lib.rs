@@ -19,9 +19,12 @@ use pyo3::prelude::*;
 
 /// Converts a numpy 1-D array of any supported dtype to `Vec<f32>`,
 /// dividing integer samples by their maximum representable value
-/// (127, 32767, 8388607, 2147483647). int32 arrays commonly carry 24-bit
-/// data in the low bits; `bit_depth` selects the divisor in that case.
-fn convert_to_f32(py: Python<'_>, obj: &Bound<'_, PyAny>, bit_depth: u32) -> PyResult<Vec<f32>> {
+/// Converts a numpy 1-D array of float32/float64 samples to `Vec<f32>`.
+///
+/// The meter always works internally in f32 (like the reference
+/// implementation); integer WAV files are converted to floats at the
+/// boundary by the reader (soundfile) before reaching the core.
+fn samples_to_f32(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Vec<f32>> {
     let arr: &Bound<'_, PyUntypedArray> = obj
         .downcast()
         .map_err(|_| PyValueError::new_err("samples must be a numpy array, not a list"))?;
@@ -33,33 +36,21 @@ fn convert_to_f32(py: Python<'_>, obj: &Bound<'_, PyAny>, bit_depth: u32) -> PyR
     }
     let dtype = arr.dtype();
     macro_rules! convert {
-        ($ty:ty, $map:expr) => {{
+        ($ty:ty) => {{
             let a = obj
                 .clone()
                 .downcast_into::<PyArray1<$ty>>()
                 .expect("dtype checked above");
-            unsafe { a.as_slice()? }.iter().map($map).collect()
+            unsafe { a.as_slice()? }.iter().map(|v| *v as f32).collect()
         }};
     }
     if dtype.is_equiv_to(&numpy::dtype::<f32>(py)) {
-        Ok(convert!(f32, |v| *v))
+        Ok(convert!(f32))
     } else if dtype.is_equiv_to(&numpy::dtype::<f64>(py)) {
-        Ok(convert!(f64, |v| *v as f32))
-    } else if dtype.is_equiv_to(&numpy::dtype::<i8>(py)) {
-        Ok(convert!(i8, |v| *v as f32 / 127.0))
-    } else if dtype.is_equiv_to(&numpy::dtype::<i16>(py)) {
-        Ok(convert!(i16, |v| *v as f32 / 32767.0))
-    } else if dtype.is_equiv_to(&numpy::dtype::<i32>(py)) {
-        // 24-bit data in int32 must be normalized by 2^23-1, not 2^31-1.
-        let div: f32 = if bit_depth <= 24 {
-            8_388_607.0
-        } else {
-            2_147_483_647.0
-        };
-        Ok(convert!(i32, |v| *v as f32 / div))
+        Ok(convert!(f64))
     } else {
         Err(PyValueError::new_err(
-            "unsupported dtype: expected float32, float64, int8, int16 or int32",
+            "unsupported dtype: expected float32 or float64",
         ))
     }
 }
@@ -125,7 +116,7 @@ impl PyActiveSpeechLevelMeter {
     /// value. Input rates below 16 kHz are resampled to 16 kHz
     /// automatically.
     fn process_block(&mut self, py: Python<'_>, samples: &Bound<'_, PyAny>) -> PyResult<()> {
-        let samples_f32 = convert_to_f32(py, samples, self.inner.params().bit_depth)?;
+        let samples_f32 = samples_to_f32(py, samples)?;
         self.total_input += samples_f32.len() as u64;
         let sixteen_k_samples: Vec<f32> = match &mut self.resampler {
             None => samples_f32,
@@ -175,6 +166,10 @@ impl PyActiveSpeechLevelMeter {
     /// Resets all accumulated state; configuration is kept.
     fn reset(&mut self) {
         self.inner.reset();
+        self.total_input = 0;
+        if let Some(resampler) = &mut self.resampler {
+            resampler.reset();
+        }
     }
 
     #[getter]
@@ -293,15 +288,14 @@ impl PyPreFilter {
         Ok(Self { inner })
     }
 
-    /// Filters samples in place. Accepts a 1-D numpy array (float32,
-    /// float64, int8, int16, int32) and returns a new float32 array to
-    /// keep integer inputs usable (gains are fractional).
+    /// Filters samples in place. Accepts a 1-D numpy array (float32 or
+    /// float64) and returns a new float32 array.
     fn process(
         &mut self,
         py: Python<'_>,
         samples: &Bound<'_, PyAny>,
     ) -> PyResult<Py<PyArray1<f32>>> {
-        let input = convert_to_f32(py, samples, 32)?;
+        let input = samples_to_f32(py, samples)?;
         let mut buf = input;
         self.inner.process(&mut buf);
         let out = PyArray1::<f32>::from_vec(py, buf);
@@ -369,8 +363,10 @@ impl PyResampler {
         })
     }
 
-    /// Feeds samples (float32); returns all output available so far.
-    fn process(&mut self, samples: Vec<f32>) -> PyResult<Vec<f32>> {
+    /// Feeds samples (float32/float64 numpy array); returns all output
+    /// available so far.
+    fn process(&mut self, py: Python<'_>, samples: &Bound<'_, PyAny>) -> PyResult<Vec<f32>> {
+        let samples = samples_to_f32(py, samples)?;
         self.total_input += samples.len() as u64;
         self.inner
             .process(&samples)

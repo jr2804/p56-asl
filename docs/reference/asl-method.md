@@ -87,11 +87,12 @@ and implemented in [`constants.rs`]:
 - The 0 dB reference of the reported levels is `max_amplitude` (default 1.0 →
   dBov, i.e. dB relative to overload). Passing an explicit physical scale
   (e.g. `max_amplitude = 0.7746` for dBm into 600 Ω) yields dBm0/dBPa.
-- Bit depth enters twice: it sets the histogram span (one threshold per bit)
-  and the integer→float normalization divisor (127, 32767, 8 388 607,
-  2 147 483 647 for 8/16/24/32-bit integer samples). 24-bit samples widened
-  into an int32 array are shifted right by 8 with `bit_depth = 24`.
-- Supported input dtypes: int8/int16/int32 and float32/float64 numpy arrays.
+- Bit depth enters once: it sets the histogram span (one threshold per bit).
+  The meter is float-only internally (like the reference P.56): integer
+  WAV files are normalized to float32 at the reader boundary (soundfile
+  divides by 127/32767/8388607/2147483647 for 8/16/24/32-bit files).
+- Supported input dtypes: float32/float64 numpy arrays (integer arrays are
+  rejected; convert them at the boundary, e.g. by reading via soundfile).
 
 ## Meter requirements behind the method
 
