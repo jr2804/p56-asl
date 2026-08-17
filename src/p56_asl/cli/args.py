@@ -47,6 +47,16 @@ ChannelsCalibrateOption = Annotated[
     ),
 ]
 
+# libsndfile subtype for `calibrate` output (PCM_16, FLOAT, FLAC, MPEG_LAYER_III, ...).
+# When omitted, the input file's subtype is reused.
+SubtypeOption = Annotated[
+    str | None,
+    typer.Option(
+        "--subtype",
+        help=("Output libsndfile subtype (PCM_16, FLOAT, FLAC, MPEG_LAYER_III, ...). Default: reuse the input file's subtype. FLOAT/DOUBLE do not clip."),
+    ),
+]
+
 
 class OutputFormat(StrEnum):
     """Output format for `measure`."""

@@ -61,6 +61,7 @@ Both commands accept:
 | `--time-start`   | `0.0`          | Start of the analysis window (s).                                  |
 | `--time-duration`| to end of file | Length of the analysis window (s).                                 |
 | `--channels`     | all channels   | 1-indexed channel or comma list, e.g. `1`, `1,2`, `2, 4`; blanks around separators are tolerated. |
+| `--subtype`      | input subtype  | `calibrate` output libsndfile subtype (e.g. `PCM_16`, `PCM_24`, `FLOAT`, `DOUBLE`, `FLAC`); the container follows the output extension. |
 
 `measure` additionally accepts `--format`/`-f` (`text` or `json`).
 
@@ -69,6 +70,7 @@ Both commands accept:
 - PCM 8/16/24/32-bit integer (`WAVE_FORMAT_PCM` and the extensible variant)
 - IEEE float 32/64-bit (`WAVE_FORMAT_IEEE_FLOAT`)
 
-Integer data is normalized to $[-1, 1]$ on read; on write, out-of-range
-values are clipped and the file keeps its original bit depth and integer/float
-encoding.
+Integer data is normalized to $[-1, 1]$ on read. On write, the output uses
+`--subtype` (default: the input's subtype); out-of-range values are clipped
+with a warning for fixed-point output, while float output (`FLOAT`/`DOUBLE`)
+keeps values beyond $\pm 1$ unclipped.
