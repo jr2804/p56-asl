@@ -19,8 +19,6 @@ from p56_asl.cli import app as cli_app
 from p56_asl.cli.app import app, main
 from p56_asl.cli.args import parse_channels
 
-pytest.importorskip("p56_asl._native", reason="native extension not built")
-
 _FS = 16_000
 
 runner = CliRunner()
@@ -67,7 +65,7 @@ def test_get_version_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     """--version falls back to 0.0.0 when package metadata is missing."""
 
     def boom(name: str) -> str:  # pragma: no cover - only used when patched
-        raise RuntimeError("not installed")
+        raise md.PackageNotFoundError
 
     monkeypatch.setattr(cli_app, "version", boom)
     assert cli_app._get_version() == "0.0.0"

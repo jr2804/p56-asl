@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
 import typer
 
@@ -14,7 +14,7 @@ _DESC = (
 )
 
 app = typer.Typer(
-    name="p56_asl",
+    name="ITU-T P.56 ASL-Meter",
     help=_DESC,
     add_completion=True,
     no_args_is_help=True,
@@ -46,7 +46,7 @@ def _get_version() -> str:
     """Get application version from package metadata."""
     try:
         return version("p56_asl")
-    except Exception:
+    except PackageNotFoundError:
         return "0.0.0"  # Fallback for development mode
 
 

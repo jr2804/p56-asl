@@ -16,9 +16,6 @@ from scipy.io import wavfile
 
 from p56_asl import ActiveSpeechLevelMeter, Measurement
 
-pytest.importorskip("p56_asl._native", reason="native extension not built")
-
-
 _FP = r"(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)"
 
 

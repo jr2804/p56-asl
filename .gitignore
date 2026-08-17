@@ -28,6 +28,9 @@ uv.lock
 # Generated verification plots (regenerable from tests)
 /tests/plots/
 
+# Pytest cache/test data (created by runs with a local cache_dir; not versioned)
+/tests/test-cache/
+
 # temp folders
 /.tmp
 /tmp

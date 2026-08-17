@@ -10,8 +10,6 @@ import xy.pyplot as plt
 
 from p56_asl import ActiveSpeechLevelMeter, PreFilter
 
-pytest.importorskip("p56_asl._native", reason="native extension not built")
-
 
 @pytest.mark.parametrize("band", ["NB", "nb", "Swb", "swb", "FB", "fb"])
 def test_band_parse_case_insensitive(band: str) -> None:

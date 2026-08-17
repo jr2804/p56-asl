@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -67,7 +68,7 @@ def measure(
 
     results: list[dict[str, Any]] = []
     for c in selected:
-        meter = ActiveSpeechLevelMeter(sample_rate=float(rate))  # noqa: ARG001
+        meter = ActiveSpeechLevelMeter(sample_rate=float(rate))
         prefilter = PreFilter(band, float(rate)) if band else None
         rs = _new_resampler(src_rate, rate) if src_rate != rate else None
         n_processed: int = 0
@@ -154,7 +155,7 @@ def calibrate(
     dst_subtype = subtype if subtype is not None else info.subtype
     dst = output_path if output_path is not None else input_path
     try:
-        _stream_calibrate(
+        peak = _stream_calibrate(
             input_path,
             dst,
             info,
@@ -168,12 +169,12 @@ def calibrate(
         )
     except (sf.LibsndfileError, OSError, ValueError) as e:  # pragma: no cover
         raise typer.BadParameter(f"could not write {dst}: {e}") from e
-    if dst_subtype in _CLIPPING_SUBTYPES:
-        _warn_if_clipping(dst)
+    if dst_subtype in _CLIPPING_SUBTYPES and peak >= 1.0:
+        typer.echo(f"warning: {dst.name}: clipping in output (peak {peak:.4f} >= 1.0)", err=True)
     typer.echo(f"Calibrated {len(selected)} channel(s) by {gain:+.2f} dB -> {dst}")
 
 
-def _sf_info(path: Path) -> Any:
+def _sf_info(path: Path) -> sf._SoundFileInfo:
     try:
         return sf.info(path)
     except (sf.LibsndfileError, OSError) as exc:  # pragma: no cover
@@ -193,11 +194,11 @@ def _pipeline(source_rate: int, fs: int | None, band: str | None) -> tuple[int, 
         raise typer.BadParameter(f"--pre-filter must be NB, SWB or FB, got {band!r}")
     rate = fs if fs is not None else source_rate
     if rate <= 0:
-        raise typer.BadParameter(f"--fs must be positive, got {rate}")  # pragma: no cover  # pragma: no cover
+        raise typer.BadParameter(f"--fs must be positive, got {rate}")  # pragma: no cover
     return rate, PreFilter(band, float(rate)) if band else None
 
 
-def _iter_channel(path: Path, info: Any, channel: int, time_start: float, time_duration: float | None) -> Any:
+def _iter_channel(path: Path, info: sf._SoundFileInfo, channel: int, time_start: float, time_duration: float | None) -> Iterator[np.ndarray]:
     start, leftover = _window(info, time_start, time_duration)
     with sf.SoundFile(path) as src:
         src.seek(start)
@@ -212,7 +213,7 @@ def _iter_channel(path: Path, info: Any, channel: int, time_start: float, time_d
 def _stream_calibrate(
     src_path: Path,
     dst_path: Path,
-    info: Any,
+    info: sf._SoundFileInfo,
     rate: int,
     selected: list[int],
     band: str | None,
@@ -220,18 +221,17 @@ def _stream_calibrate(
     time_start: float,
     time_duration: float | None,
     dst_subtype: str,
-) -> None:
+) -> float:
     src_rate = int(info.samplerate)
     n_ch = info.channels
     resample = src_rate != rate
-    if resample and Resampler is None:  # pragma: no cover
-        raise typer.BadParameter("native extension not built; run `mise run rust-dev`")
     resamplers = [_new_resampler(src_rate, rate) for _ in range(n_ch)] if resample else []
     prefilters = {c: PreFilter(band, float(rate)) for c in selected} if band else {}
 
     fd, tmp_name = tempfile.mkstemp(suffix=".wav", dir=dst_path.parent)
     os.close(fd)
     tmp = Path(tmp_name)
+    peak = 0.0
     try:
         with sf.SoundFile(str(tmp), "w", samplerate=rate, channels=n_ch, subtype=dst_subtype) as dst:
             for block in _iter_all(src_path, info, time_start, time_duration):
@@ -252,6 +252,7 @@ def _stream_calibrate(
                     if pf is not None:
                         ch = np.asarray(pf.process(ch.astype(np.float32, copy=False)), dtype=np.float64)
                     out[:, c] = ch * factor
+                peak = max(peak, float(np.max(np.abs(out))))
                 dst.write(out)
             if resample:
                 tails = [np.asarray(rs.flush(), dtype=np.float64) for rs in resamplers]
@@ -266,21 +267,21 @@ def _stream_calibrate(
                         if pf is not None:
                             ch = np.asarray(pf.process(ch.astype(np.float32, copy=False)), dtype=np.float64)
                         out[:, c] = ch * factor
+                    peak = max(peak, float(np.max(np.abs(out))))
                     dst.write(out)
         tmp.replace(dst_path)
+        return peak
     except Exception:
         tmp.unlink(missing_ok=True)
         raise
 
 
-def _new_resampler(src_rate: int, dst_rate: int) -> Any:
-    """Constructs a resampler; clear error when the native build is missing."""
-    if Resampler is None:  # pragma: no cover
-        raise typer.BadParameter("native extension not built; run `mise run rust-dev`")
+def _new_resampler(src_rate: int, dst_rate: int) -> Resampler:
+    """Constructs a resampler for the given sample-rate conversion."""
     return Resampler(src_rate, dst_rate)
 
 
-def _iter_all(path: Path, info: Any, time_start: float, time_duration: float | None) -> Any:
+def _iter_all(path: Path, info: sf._SoundFileInfo, time_start: float, time_duration: float | None) -> Iterator[np.ndarray]:
     start, leftover = _window(info, time_start, time_duration)
     with sf.SoundFile(path) as src:
         src.seek(start)
@@ -292,7 +293,7 @@ def _iter_all(path: Path, info: Any, time_start: float, time_duration: float | N
             yield np.ascontiguousarray(frames, dtype=np.float64)
 
 
-def _window(info: Any, time_start: float, time_duration: float | None) -> tuple[int, int]:
+def _window(info: sf._SoundFileInfo, time_start: float, time_duration: float | None) -> tuple[int, int]:
     src_rate = int(info.samplerate)
     start = max(0, int(round(time_start * src_rate)))
     if start >= info.frames:
@@ -301,10 +302,3 @@ def _window(info: Any, time_start: float, time_duration: float | None) -> tuple[
     if time_duration is not None:
         remaining = min(remaining, int(round(time_duration * src_rate)))
     return start, remaining
-
-
-def _warn_if_clipping(path: Path) -> None:
-    data, _ = sf.read(path, always_2d=True, dtype="float64")
-    peak = float(np.max(np.abs(data)))
-    if peak >= 1.0:
-        typer.echo(f"warning: {path.name}: clipping in output (peak {peak:.4f} >= 1.0)", err=True)

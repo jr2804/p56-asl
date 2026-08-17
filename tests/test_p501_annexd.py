@@ -24,8 +24,6 @@ from p56_asl.cli.app import app
 
 from .conftest import measure_wav
 
-pytest.importorskip("p56_asl._native", reason="native extension not built")
-
 EXPECTED_ASL_DB = -26.0
 #: Empirical corpus tolerance. The Annex D corpus is *normalized* to
 #: −26 dBov, but re-measuring it with P.56 shows intrinsic deviations:
