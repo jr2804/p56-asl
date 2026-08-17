@@ -161,7 +161,7 @@ impl ActiveSpeechLevelMeter {
 
         // Auto-calibrate *before* threshold counting so the block that
         // triggers the scale-up is measured on the corrected grid.
-        self.calibrate_if_needed(block);
+        self.calibrate_if_needed();
 
         // Process 3: threshold counting on the envelope.
         for &q in &envelope {
@@ -174,7 +174,7 @@ impl ActiveSpeechLevelMeter {
     /// `max_amplitude`, double `max_amplitude` (and the thresholds with it)
     /// until the peak fits. Called *before* threshold counting so the
     /// triggering block is measured on the corrected grid.
-    fn calibrate_if_needed(&mut self, block_len: usize) {
+    fn calibrate_if_needed(&mut self) {
         if !self.params.auto_calibrate || self.max <= self.max_amplitude {
             return;
         }
@@ -189,7 +189,6 @@ impl ActiveSpeechLevelMeter {
             // blocks are compared on the corrected scale.
             self.max = self.max_p.max(-self.max_n);
         }
-        let _ = block_len;
     }
 
     /// Computes the final measurement from the accumulated state.
@@ -439,9 +438,8 @@ mod tests {
         })
         .unwrap();
         let mut block = [0.0f32; 256];
-        for (k, s) in block.iter_mut().enumerate() {
+        for s in block.iter_mut() {
             *s = 0.5;
-            let _ = k;
         }
         m.process_block(&block).unwrap();
         // Pre-calibration block: no scale-up, activity recorded on base grid.

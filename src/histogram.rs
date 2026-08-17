@@ -55,16 +55,9 @@ impl Histogram {
     }
 
     /// Number of thresholds in use (`bit_depth - 1`) (diagnostic access).
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn len(&self) -> usize {
         self.thresholds.len()
-    }
-
-    /// Returns `true` when there are no thresholds (cannot happen for a
-    /// valid bit depth, kept for `len`/`is_empty` API symmetry).
-    #[allow(dead_code)]
-    pub fn is_empty(&self) -> bool {
-        self.thresholds.is_empty()
     }
 
     /// Threshold levels, ascending.

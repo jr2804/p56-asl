@@ -9,59 +9,8 @@
 //! ```
 //!
 //! The envelope `q` is then compared against the histogram thresholds.
-//!
-//! # FFT-domain design (extended implementation)
-//!
-//! The cascade is a single LTI system with transfer function
-//!
-//! ```text
-//!        ⎛  1 − g   ⎞²
-//! H(z) = ⎜ ──────── ⎟
-//!        ⎝ 1 − g z⁻¹ ⎠
-//! ```
-//!
-//! Process 2 can therefore run **blockwise** on fixed `2^N` blocks: take the
-//! DFT of the block of `|x|`, multiply bin-wise by `H(e^{jω_k})` sampled on
-//! the DFT grid, and inverse-transform. Because the IIR filter is infinite,
-//! plain circular convolution is only an approximation — an overlap-save
-//! scheme must carry the previous block's tail (or state is propagated
-//! exactly by processing the filter state separately). This is the key
-//! design challenge of the blockwise implementation and is tracked as an
-//! open item; [`TimeDomainFilter`] is the exact reference-equivalent path
-//! and the correctness baseline.
-//!
-//! [`fft_filter_response`] precomputes `H(e^{jω_k})` on the DFT grid for a
-//! given block size without requiring an FFT library, ready for the
-//! blockwise filter once the convolution backend is chosen.
-
-/// Transfer function of the cascade at the DFT-bin frequencies.
-///
-/// Returns the complex frequency response `H(e^{j·2π·k/N})` for
-/// `k = 0..N/2` (non-negative bins; the rest follow by Hermitian symmetry).
-/// `g` is the smoothing coefficient `e^(−1/(f·T))`.
-///
-/// Reserved for the blockwise FFT-domain implementation (see module docs);
-/// not yet wired into the processing path.
-#[allow(dead_code)]
-pub fn fft_filter_response(g: f64, block_size: usize) -> Vec<(f64, f64)> {
-    let half = block_size / 2 + 1;
-    let num = (1.0 - g) * (1.0 - g);
-    let mut response = Vec::with_capacity(half);
-    for k in 0..half {
-        let omega = 2.0 * std::f64::consts::PI * k as f64 / block_size as f64;
-        let re = g * omega.cos();
-        let im = -g * omega.sin();
-        // 1 / (1 − g·z⁻¹) with z⁻¹ = e^(−jω) → denominator 1 − g·(cos ω − j sin ω)
-        let den_re = 1.0 - re;
-        let den_im = -im;
-        let den_sq = den_re * den_re + den_im * den_im;
-        let mag = num / den_sq;
-        let phase = den_im.atan2(den_re);
-        let (sin_p, cos_p) = phase.sin_cos();
-        response.push((mag * cos_p, mag * sin_p));
-    }
-    response
-}
+//! [`TimeDomainFilter`] is the exact reference-equivalent path and the
+//! correctness baseline; it is the only implementation.
 
 /// Temporal smoothing filter producing the envelope `q` per sample.
 pub trait SmoothingFilter {
@@ -88,12 +37,6 @@ impl TimeDomainFilter {
     pub fn new(sample_rate: f64) -> Self {
         let g = (-1.0 / (sample_rate * crate::constants::SMOOTHING_TIME_CONSTANT_S)).exp();
         Self { g, p: 0.0, q: 0.0 }
-    }
-
-    /// The smoothing coefficient `g = e^(−1/(f·T))` (diagnostic access).
-    #[allow(dead_code)]
-    pub fn coefficient(&self) -> f64 {
-        self.g
     }
 
     /// Current envelope state `q` (diagnostic access).
@@ -170,13 +113,5 @@ mod tests {
 
         assert_eq!(env_whole, env_split);
         assert_eq!(whole.envelope(), split.envelope());
-    }
-
-    #[test]
-    fn fft_response_dc_bin_is_one() {
-        let g = (-1.0f64 / (8_000.0 * 0.03)).exp();
-        let resp = fft_filter_response(g, 256);
-        assert!((resp[0].0 - 1.0).abs() < 1e-9); // bin 0: H(1) = 1
-        assert!(resp[0].1.abs() < 1e-9); // no phase at DC
     }
 }
