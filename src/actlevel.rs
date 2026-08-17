@@ -8,8 +8,8 @@
 //!
 //! The sample-wise loops inside [`ActiveSpeechLevelMeter::process_block`]
 //! are ordered exactly like the reference so the results are bit-identical;
-//! the FFT-domain envelope filtering (see [`crate::filter`]) is the
-//! planned blockwise acceleration.
+//! the envelope recursion and threshold counting run per sample, in the
+//! reference order.
 
 use crate::constants::{HANGOVER_TIME_S, MARGIN_DB, MIN_LOG_OFFSET, REF_DB, SILENCE_LEVEL_DB};
 use crate::error::{Error, Result};
@@ -20,11 +20,11 @@ use crate::params::Params;
 /// Results of a completed measurement.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Measurement {
-    /// Active speech level, in dB re. `max_amplitude` (dBov by default).
+    /// Active speech level, in dB re. full scale (1.0; dBov).
     pub active_speech_level_db: f64,
     /// Activity factor, in `0..1` (reference reports it in percent).
     pub activity_factor: f64,
-    /// Long-term RMS level, in dB re. `max_amplitude`.
+    /// Long-term RMS level, in dB re. full scale (1.0).
     pub rms_db: f64,
     /// Average (DC) level of the input samples.
     pub dc_level: f64,

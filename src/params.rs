@@ -16,9 +16,10 @@ pub struct Params {
     pub bit_depth: u32,
     /// Block length in samples; must be a power of two (`2^N`).
     ///
-    /// Blocks are the unit of input to [`crate::actlevel::ActiveSpeechLevelMeter::process_block`]
-    /// and enable the FFT-domain implementation of the temporal smoothing
-    /// filter (see [`crate::filter`]).
+    /// Blocks are the unit of input to
+    /// [`crate::actlevel::ActiveSpeechLevelMeter::process_block`]; the
+    /// envelope-filter state carries across blocks, so chunking never
+    /// changes the result.
     pub block_size: usize,
     /// Maximum amplitude of the input signal, i.e. the 0 dB reference
     /// (default `1.0` → dBov).

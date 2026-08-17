@@ -123,20 +123,14 @@ algorithm cares about.
 ## Blockwise operation
 
 The reference implementation is strictly sample-serial. This crate keeps the
-exact sample-domain arithmetic as the correctness baseline
-([`TimeDomainFilter`]) and restructures the meter for fixed-size
-power-of-two blocks: envelope filter state, histogram counters and energy
-accumulators all carry across `process_block` calls, so arbitrarily long
-material can be measured in bounded memory. The FFT-domain envelope
-filtering path ([`fft_filter_response`]) uses the analytic cascade transfer
-function
-
-$$
-H(z) = \left(\frac{1 - g}{1 - g\,z^{-1}}\right)^{\!2},
-$$
-
-sampled on the DFT grid; overlap handling for the IIR tail is the open item
-that separates it from the reference path.
+sample-domain arithmetic as the correctness baseline
+([`TimeDomainFilter`]) and adds a blockwise delivery interface: the caller
+feeds blocks of up to `block_size` samples to `process_block`, and the
+envelope-filter state, histogram counters and energy accumulators carry
+across calls. `block_size` is a defensive upper bound on the chunk length,
+not an algorithmic parameter — feeding one large block or many small ones
+is bit-identical, so arbitrarily long material can be measured in bounded
+memory.
 
 ## Conformance
 
@@ -146,4 +140,3 @@ suite in `tests/` pins this against committed fixtures.
 
 [`constants.rs`]: https://github.com/jr2804/p56-asl/blob/main/src/constants.rs
 [`TimeDomainFilter`]: https://github.com/jr2804/p56-asl/blob/main/src/filter.rs
-[`fft_filter_response`]: https://github.com/jr2804/p56-asl/blob/main/src/filter.rs
