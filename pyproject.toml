@@ -53,9 +53,12 @@ pythonpath = ["src", "tests"]
 cache_dir = "tests/test-cache"
 addopts = "-v --tb=short"
 
-[tool.pytest-cov]
-addopts = "--cov=p56_asl --cov-report=term-missing --cov-report=html --cov-report=xml"
+[tool.coverage.report]
 fail_under = 100
+show_missing = true
+
+[tool.coverage.run]
+source = ["p56_asl"]
 
 [tool.codespell]
 skip = "*.git,*.svg,*.lock,*.min.js,*.min.css"

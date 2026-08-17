@@ -59,25 +59,22 @@ def test_pytest_configuration() -> None:
     with open(pyproject_file, "rb") as f:
         content = tomllib.load(f)
 
-    # Verify pytest-cov configuration
+    # Verify coverage is enforced at 100% ([tool.coverage.report].fail_under).
     tool_section = content.get("tool", {})
-    if "pytest-cov" not in tool_section:
-        msg = "Missing [tool.pytest-cov] section"
+    report = tool_section.get("coverage", {}).get("report", {})
+    if "fail_under" not in report:
+        msg = "Missing [tool.coverage.report].fail_under"
         raise AssertionError(msg)
-    pytest_cov = tool_section["pytest-cov"]
-    if "fail_under" not in pytest_cov:
-        msg = "Missing fail_under"
+    if report["fail_under"] != 100:
+        msg = f"Coverage should be 100%, got {report['fail_under']}"
         raise AssertionError(msg)
-    if pytest_cov["fail_under"] != 100:
-        msg = "Coverage should be 100%"
+    # Verify coverage source matches package slug (snake_case).
+    run = tool_section.get("coverage", {}).get("run", {})
+    source = run.get("source", [])
+    expected_slug = "p56_asl"
+    if expected_slug not in source:
+        msg = f"Coverage source should include '{expected_slug}', got: {source}"
         raise AssertionError(msg)
-    # Verify coverage source matches package slug (snake_case)
-    if "addopts" in pytest_cov:
-        addopts = pytest_cov["addopts"]
-        expected_slug = "p56_asl"
-        if expected_slug not in addopts:
-            msg = f"Coverage should be configured for '{expected_slug}', got: {addopts}"
-            raise AssertionError(msg)
 
 
 def test_mise_tasks_configured() -> None:

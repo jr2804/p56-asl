@@ -69,3 +69,12 @@ skills-lock.json
 
 # mkdocs/zensical output
 site/
+
+# repowise
+.repowise/
+
+# repowise API keys (local)
+.repowise/.env
+.mcp.json
+mcporter.json
+mise.local.toml

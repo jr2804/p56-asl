@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -36,13 +37,17 @@ def p501_annex_d(request: pytest.FixtureRequest) -> list[Path]:
     """Download and extract the P.501 Annex D speech signals once per session.
 
     Returns the sorted list of extracted WAV files (cached under the
-    pytest cache directory, so repeated runs skip the download).
+    pytest cache directory, so repeated runs skip the download). Skips
+    when the download fails (e.g. offline CI) and no cache exists.
     """
     cache = Path(request.config.cache.mkdir("p501-annex-d"))
     marker = cache / ".extracted"
     if not marker.is_file():
         zip_path = cache / "Speech_Signals_AnnexD.zip"
-        urllib.request.urlretrieve(P501_ANNEX_D_URL, zip_path)  # noqa: S310
+        try:
+            urllib.request.urlretrieve(P501_ANNEX_D_URL, zip_path)  # noqa: S310
+        except (OSError, urllib.error.URLError) as exc:
+            pytest.skip(f"P.501 Annex D corpus unavailable (offline?): {exc}")
         with zipfile.ZipFile(zip_path) as zf:
             zf.extractall(cache)
         zip_path.unlink()
