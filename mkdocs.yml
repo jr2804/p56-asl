@@ -62,9 +62,9 @@ extra_css:
   - stylesheets/extra.css
 
 extra_javascript:
-  # MathJax 3 — pymdownx.arithmatex (generic: true) emits \(...\) and
-  # \[...\] which MathJax 3 picks up by default.
-  - javascripts/mathjax.js
+  # MathJax 3 — pymdownx.arithmatex (generic: true) emits \(...\) inside
+  # <span class="arithmatex"> and \[...\] inside <div class="arithmatex">.
+  # MathJax 3 recognizes these by default; no custom config needed.
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 nav:

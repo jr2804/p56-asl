@@ -1,16 +1,4 @@
-/* Hide raw LaTeX until MathJax typesets it (prevents the flash of
-   unrendered \(...\) / \[...\] text). */
-.arithmatex:not(.mjx-math) {
-  visibility: hidden;
-}
-
-/* Once MathJax has typeset a node it gets the mjx-math class. */
-.arithmatex.mjx-math {
-  visibility: visible;
-}
-
-/* MathJax renders inline math into mjx-container elements; keep them
-   inline so the surrounding text flows correctly. */
+/* Keep inline MathJax containers inline so text flows correctly. */
 mjx-container[display="inline"] {
   display: inline-block;
   margin: 0 0.1em;
