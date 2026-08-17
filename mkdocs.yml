@@ -54,6 +54,19 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/p56-asl/
 
+extra_css:
+  # Hide raw LaTeX until MathJax typesets it (prevents the flash of
+  # unrendered \(...\) / \[...\] text). MathJax flips a class via its
+  # typeset promise, but the simplest robust trick is to set the
+  # content to invisible until first typeset.
+  - stylesheets/extra.css
+
+extra_javascript:
+  # MathJax 3 — pymdownx.arithmatex (generic: true) emits \(...\) and
+  # \[...\] which MathJax 3 picks up by default.
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
 nav:
   - Home:
       - Overview: index.md
