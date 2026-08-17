@@ -102,7 +102,7 @@ Top-level boundaries in this project:
 
 - `src/p56_asl/` (primary package code)
 - `tests/` (test suite)
-- `docs/` (documentation)
+- `docs/` (documentation — see `docs/AGENTS.md` for markdown/math style, figures, toolchain)
 - `.config/mise/` (task/tooling configuration)
 - `.config/mise/conf.d/` (dev-feature MCP and skills task fragments)
 

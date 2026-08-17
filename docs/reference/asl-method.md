@@ -24,24 +24,26 @@ material.
 P.56 models the measurement as three cascaded processes applied to the input
 signal $x[n]$:
 
-1. **Process 1 — rectification and second-moment integration.** The signal
-   is squared and integrated to track the long-term energy. The total
-   activity of the signal is derived from the ratio of the long-term energy
-   to the maximum amplitude squared (clause 9).
-2. **Process 2 — envelope detection.** The rectified signal $|x[n]|$ passes
-   through a cascade of two identical first-order low-pass smoothing filters
-   with time constant $T = 0.03\ \mathrm{s}$. With
-   $g = e^{-1/(f T)}$ for sampling rate $f$:
+**Process 1 — rectification and second-moment integration.** The signal
+is squared and integrated to track the long-term energy. The total
+activity of the signal is derived from the ratio of the long-term energy
+to the maximum amplitude squared (clause 9).
 
-   ```math
-   p[n] = g\,p[n-1] + (1 - g)\,|x[n]|, \qquad
-   q[n] = g\,q[n-1] + (1 - g)\,p[n].
-   ```
-3. **Process 3 — threshold histogram with hangover.** The envelope $q[n]$ is
-   compared against a geometric progression of thresholds (each successive
-   threshold half the previous, spanning the bit depth of the signal), and
-   per-threshold activity counters are extended by a hangover of
-   $H = 0.20\ \mathrm{s}$ after the envelope falls below the threshold. This
+**Process 2 — envelope detection.** The rectified signal $|x[n]|$ passes
+through a cascade of two identical first-order low-pass smoothing filters
+with time constant $T = 0.03\ \mathrm{s}$. With
+$g = e^{-1/(f T)}$ for sampling rate $f$:
+
+```math
+p[n] = g\,p[n-1] + (1 - g)\,|x[n]|, \qquad
+q[n] = g\,q[n-1] + (1 - g)\,p[n].
+```
+
+**Process 3 — threshold histogram with hangover.** The envelope $q[n]$ is
+compared against a geometric progression of thresholds (each successive
+threshold half the previous, spanning the bit depth of the signal), and
+per-threshold activity counters are extended by a hangover of
+$H = 0.20\ \mathrm{s}$ after the envelope falls below the threshold. This
    bridges short pauses inside speech bursts so that pauses within a phrase
    do not count as inactive.
 
