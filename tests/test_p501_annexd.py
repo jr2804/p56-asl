@@ -116,7 +116,7 @@ def test_p501_annex_d_auto_calibration_triggers_on_over_range(p501_annex_d: list
 
     prefilter = PreFilter(band, float(rate))
     filtered = prefilter.process(scaled.astype("float32", copy=False))
-    meter = ActiveSpeechLevelMeter(sample_rate=float(rate), bit_depth=32, max_amplitude=1.0, auto_calibrate=True)
+    meter = ActiveSpeechLevelMeter(sample_rate=float(rate), max_amplitude=1.0, auto_calibrate=True)
     for k in range(0, len(filtered), 65536):
         meter.process_block(filtered[k : k + 65536])
     result = meter.finish()
@@ -162,9 +162,7 @@ def test_p501_annex_d_cli_measure_json(p501_annex_d: list[Path], tmp_path: Path)
         assert payload["results"], f"{wav.name}: no results"
         for r in payload["results"]:
             if abs(r["active_speech_level_db"] - EXPECTED_ASL_DB) > TOLERANCE_DB:
-                failures.append(
-                    f"{wav.name} [{band}] ch{r['channel']}: {r['active_speech_level_db']:+.3f} dB (expected {EXPECTED_ASL_DB})"
-                )
+                failures.append(f"{wav.name} [{band}] ch{r['channel']}: {r['active_speech_level_db']:+.3f} dB (expected {EXPECTED_ASL_DB})")
     assert not failures, "CLI ASL out of tolerance:\n  " + "\n  ".join(failures)
 
 
@@ -225,7 +223,6 @@ def _measure(samples: np.ndarray, rate: int, band: str, *, auto_calibrate: bool 
     filtered = prefilter.process(samples.astype("float32", copy=False))
     meter = ActiveSpeechLevelMeter(
         sample_rate=float(rate),
-        bit_depth=32,
         max_amplitude=1.0,
         auto_calibrate=auto_calibrate,
     )
