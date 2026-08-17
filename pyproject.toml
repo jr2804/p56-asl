@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "An extended version of the ITU-T Rec. P.56 Active Speech Level (ASL). Complies with reference C-implementation but re-implemented in Rust and MIT-licensed. "
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 authors = [
     { name = "Jan.Reimes", email = "Jan.Reimes@head-acoustics.com" }
 ]
@@ -30,6 +30,7 @@ dev = [
     "markdown-callouts>=0.4",
     "ghp-import>=2.1",
     "scipy>=1.18.0",
+    "xy>=0.0.6",
 ]
 
 [project.scripts]

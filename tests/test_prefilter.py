@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
+import xy.pyplot as plt
 
 from p56_asl import ActiveSpeechLevelMeter, PreFilter
 
@@ -108,3 +111,72 @@ def test_prefilter_before_measurement() -> None:
     # hum's share of the total power (0.4^2 of 0.4^2+0.2^2 ≈ 6.0 dB).
     drop = r_raw.active_speech_level_db - r_pf.active_speech_level_db
     assert 3.0 < drop < 9.0
+
+
+def test_plot_response_and_tolerance_corridor() -> None:
+    """Render response vs ITU tolerance corridor for NB, SWB, FB to tests/plots/.
+
+    Single figure, three panels (one per band), log-frequency axis. The
+    corridor anchors are ITU-T Rec. P.56 Tables 3 / B.1 / C.1; the upper
+    limit interpolates linearly in log10(f) between anchors and clamps
+    outside, the lower limit is a flat -0.25 dB segment. The plot doubles
+    as a verification: every band must stay inside its corridor on the
+    plotted grid.
+    """
+    # Operating rate of the suite/reference implementation; the spec's
+    # 70 kHz corridor anchors just mean "up to the upper end" and are
+    # evaluated up to Nyquist (24 kHz) here.
+    fs = 48_000.0
+    bands = ("NB", "SWB", "FB")
+    corridor: dict[str, tuple[list[tuple[float, float]], list[tuple[float, float]]]] = {
+        "NB": ([(16.0, -49.75), (160.0, 0.25), (7000.0, 0.25), (70000.0, -49.75)], [(200.0, -0.25), (5500.0, -0.25)]),
+        "SWB": ([(16.0, -49.75), (50.0, 0.25), (14000.0, 0.25), (70000.0, -49.75)], [(70.0, -0.25), (12000.0, -0.25)]),
+        "FB": ([(9.0, -49.75), (20.0, 0.25), (20000.0, 0.25), (70000.0, -49.75)], [(30.0, -0.25), (18000.0, -0.25)]),
+    }
+
+    f = np.logspace(np.log10(5.0), np.log10(fs / 2), 2_000)
+
+    def upper_db(anchors: list[tuple[float, float]]) -> np.ndarray:
+        fa = np.array([a[0] for a in anchors])
+        la = np.array([a[1] for a in anchors])
+        return np.interp(np.log10(f), np.log10(fa), la, left=la[0], right=la[-1])
+
+    fig, axes = plt.subplots(1, 3, figsize=(16, 5), sharey=True)
+    for ax, band in zip(axes, bands, strict=False):
+        up = upper_db(corridor[band][0])
+        lo = np.full_like(f, np.nan)
+        (f0, lo_db), (f1, _) = corridor[band][1]
+        lo[(f >= f0) & (f <= f1)] = lo_db
+
+        resp = np.array([PreFilter(band, fs).response_db(fi) for fi in f])
+
+        ax.plot(f, resp, color="#1f77b4", lw=1.5, label="response")
+        ax.plot(f, up, "--", color="crimson", lw=1.5, label="upper limit")
+        # Lower limit is a finite segment only (flat -0.25 dB); plotting it
+        # as a masked slice keeps the dash style (NaN gaps render solid).
+        fin = np.isfinite(lo)
+        ax.plot(f[fin], lo[fin], "--", color="crimson", lw=1.5, label="lower limit")
+        ax.axvline(1_000, color="gray", lw=0.8, ls=":")
+        ax.set_title(band)
+        ax.set_xlabel("frequency [Hz]")
+        # xy's semilogx() renders no x ticks; set the log scale explicitly.
+        ax.set_xscale("log")
+        ax.set_xticks([10, 100, 1_000, 10_000])
+        ax.set_xlim(5.0, fs / 2)
+        ax.set_ylim(-25.0, 5.0)
+        ax.grid(which="both", alpha=0.3)
+
+        # Verification on the plotted grid: response stays inside corridor.
+        viol = np.nanmax(np.maximum(resp - up, lo - resp))
+        assert viol <= 0.05, f"{band} violates corridor by {viol:.3f} dB"
+
+    axes[0].set_ylabel("relative response [dB]")
+    axes[0].legend(fontsize=8)
+    fig.suptitle("P.56 protection pre-filters: response vs ITU tolerance corridor (fs = 48 kHz)")
+    fig.tight_layout()
+
+    out = Path(__file__).parent / "plots" / "prefilter_response.svg"
+    out.parent.mkdir(exist_ok=True)
+    plt.savefig(out)
+    plt.close(fig)
+    assert out.stat().st_size > 0

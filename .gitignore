@@ -25,6 +25,9 @@ uv.lock
 .config/memorygraph/memory.db
 /.opencode
 
+# Generated verification plots (regenerable from tests)
+/tests/plots/
+
 # temp folders
 /.tmp
 /tmp
@@ -75,6 +78,9 @@ site/
 
 # repowise API keys (local)
 .repowise/.env
+
+# other tooling config files
 .mcp.json
 mcporter.json
 mise.local.toml
+.aislop/
