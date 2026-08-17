@@ -128,7 +128,7 @@ p56-asl/
 | Type checker | [ty](https://github.com/google/ty) | Strict type checking |
 | Testing | [pytest](https://pytest.org/) | Test framework with 100% coverage gate |
 | Spell check | [codespell](https://github.com/codespell-project/codespell) | Code and doc spell checking |
-| Documentation | [Zensical](https://github.com/zensical/zensical) | MkDocs Material with executable examples |
+| Documentation | [MkDocs Material](https://github.com/squidfunk/mkdocs-material) | Static site with auto-generated API + executable examples |
 | Versioning | [uv-dynamic-versioning](https://github.com/ninoseki/uv-dynamic-versioning) | Git tag-based versioning |
 | Hooks | [pre-commit](https://pre-commit.com/) | Automated quality gate |
 | CI/CD | GitHub Actions | Test matrix + PyPI release |

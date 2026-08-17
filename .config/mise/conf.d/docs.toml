@@ -1,5 +1,11 @@
-
 [tasks.docs]
-description = "Build documentation"
-run = ["uv run zensical build"]
+description = "Build documentation site"
+run = ["uv run mkdocs build --strict"]
 
+[tasks.docs-serve]
+description = "Serve documentation site with live reload"
+run = ["uv run mkdocs serve"]
+
+[tasks.docs-deploy]
+description = "Deploy documentation site to GitHub Pages (gh-pages branch)"
+run = ["uv run ghp-import -nfp site"]

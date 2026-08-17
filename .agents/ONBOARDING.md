@@ -32,7 +32,7 @@ mise all        # test + lint + format in one pass
 - **`src/p56_asl/`** — primary package source (src layout)
 - **`tests/`** — pytest suite (100% coverage gate)
 - **`src/p56_asl/cli/`** — Typer CLI
-- **`docs/`** — Zensical / MkDocs Material documentation
+- **`docs/`** — MkDocs Material documentation (mkdocs.yml)
 - **`.config/mise/`** — task runner config (`config.toml` + `conf.d/` fragments)
 
 ## Where to dig deeper

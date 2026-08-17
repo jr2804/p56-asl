@@ -1,0 +1,130 @@
+site_name: p56-asl
+site_description: Extended ITU-T Rec. P.56 Active Speech Level (ASL)
+site_author: Jan.Reimes
+site_url: https://jr2804.github.io/p56-asl/
+repo_url: https://github.com/jr2804/p56-asl
+repo_name: p56-asl
+copyright: Copyright &copy; 2026 Jan.Reimes
+
+theme:
+  name: material
+  features:
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - content.footnote.tooltips
+    - content.tabs.link
+    - content.tooltips
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.path
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: lime
+      toggle:
+        icon: material/weather-night
+        name: Switch to system mode
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/jr2804/p56-asl
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/p56-asl/
+
+nav:
+  - Home:
+      - Overview: index.md
+      - Credits: credits.md
+      - License: license.md
+  - API reference: reference/api.md
+  - CLI reference: reference/cli.md
+  - ASL method: reference/asl-method.md
+  - Pre-filter bands: reference/prefilter-bands.md
+  - Measuring above full scale: reference/extended-mode.md
+  - Development:
+      - Contributing: contributing.md
+      - Code of Conduct: code_of_conduct.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_section_style: list
+            filters: public
+            heading_level: 1
+            inherited_members: true
+            merge_init_into_class: true
+            parameter_headings: true
+            separate_signature: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            show_source: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+            summary: true
+            unwrap_annotated: true
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - callouts
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+exclude_docs: |
+  scripts/
+  tests/
