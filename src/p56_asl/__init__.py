@@ -1,4 +1,10 @@
-"""p56_asl package."""
+"""Extended ITU-T Rec. P.56 active speech level measurement.
+
+Rust-core implementation of the P.56 speech voltmeter with blockwise
+streaming, P.56 protection pre-filters (NB/SWB/FB), resampling, and an
+extended mode that auto-calibrates the amplitude reference for signals
+whose peaks exceed full scale.
+"""
 
 from __future__ import annotations
 
