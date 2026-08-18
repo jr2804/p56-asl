@@ -139,8 +139,11 @@ def test_plot_response_and_tolerance_corridor() -> None:
         la = np.array([a[1] for a in anchors])
         return np.interp(np.log10(f), np.log10(fa), la, left=la[0], right=la[-1])
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5), sharey=True)
-    for ax, band in zip(axes, bands, strict=False):
+    fig, axes = plt.subplots(1, 3, figsize=(16, 5), sharey=True, constrained_layout=True)
+    # Okabe-Ito palette (colorblind-safe); solid vs dashed adds redundant
+    # encoding beyond hue. No suptitle — the docstring is the caption.
+    c_resp, c_limit = "#0072B2", "#D55E00"
+    for letter, ax, band in zip("ABC", axes, bands, strict=False):
         up = upper_db(corridor[band][0])
         lo = np.full_like(f, np.nan)
         (f0, lo_db), (f1, _) = corridor[band][1]
@@ -148,15 +151,16 @@ def test_plot_response_and_tolerance_corridor() -> None:
 
         resp = np.array([PreFilter(band, fs).response_db(fi) for fi in f])
 
-        ax.plot(f, resp, color="#1f77b4", lw=1.5, label="response")
-        ax.plot(f, up, "--", color="crimson", lw=1.5, label="upper limit")
+        ax.plot(f, resp, color=c_resp, lw=1.5, label="response")
+        ax.plot(f, up, "--", color=c_limit, lw=1.5, label="upper limit")
         # Lower limit is a finite segment only (flat -0.25 dB); plotting it
         # as a masked slice keeps the dash style (NaN gaps render solid).
         fin = np.isfinite(lo)
-        ax.plot(f[fin], lo[fin], "--", color="crimson", lw=1.5, label="lower limit")
+        ax.plot(f[fin], lo[fin], "--", color=c_limit, lw=1.5, label="lower limit")
         ax.axvline(1_000, color="gray", lw=0.8, ls=":")
-        ax.set_title(band)
-        ax.set_xlabel("frequency [Hz]")
+        ax.set_title(f"{letter} — {band}", loc="left", fontweight="bold", fontsize=12)
+        ax.set_xlabel("frequency [Hz]", fontsize=12)
+        ax.tick_params(labelsize=10)
         # xy's semilogx() renders no x ticks; set the log scale explicitly.
         ax.set_xscale("log")
         ax.set_xticks([10, 100, 1_000, 10_000])
@@ -168,10 +172,8 @@ def test_plot_response_and_tolerance_corridor() -> None:
         viol = np.nanmax(np.maximum(resp - up, lo - resp))
         assert viol <= 0.05, f"{band} violates corridor by {viol:.3f} dB"
 
-    axes[0].set_ylabel("relative response [dB]")
-    axes[0].legend(fontsize=8)
-    fig.suptitle("P.56 protection pre-filters: response vs ITU tolerance corridor (fs = 48 kHz)")
-    fig.tight_layout()
+    axes[0].set_ylabel("relative response [dB]", fontsize=12)
+    axes[0].legend(fontsize=10, frameon=False)
 
     out = Path(__file__).parent / "plots" / "prefilter_response.svg"
     out.parent.mkdir(exist_ok=True)

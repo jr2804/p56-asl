@@ -68,13 +68,13 @@ The figure below shows a synthetic burst signal whose peak steps from
 
 ![Extended-mode auto-calibration](extended-mode.svg)
 
-**Top panel** — the signal with its smoothed envelope $q$, and the adapting
+**A** — the signal with its smoothed envelope $q$, and the adapting
 reference `max_amplitude` (dashed red). The first phase stays below
 full scale, so the reference remains `1.0`. When the first `1.5` peak
 arrives, the block triggers a doubling: `max_amplitude 1.0 → 2.0`. The
 `3.5` peak later triggers another: `2.0 → 4.0`.
 
-**Bottom panel** — the envelope and the histogram threshold grid
+**B** — the envelope and the histogram threshold grid
 $c_k = \text{max\_amplitude}\cdot 2^{-k}$ (green), all in dB re. full
 scale. Each doubling lifts every threshold by exactly **+6.02 dB** — the
 grid shifts as a rigid staircase at the two calibration instants, and the

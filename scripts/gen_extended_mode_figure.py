@@ -37,43 +37,49 @@ def main() -> None:
     meter, t_edges, amps = run_meter(x, FS, BLOCK)
 
     ts, ys = step_xy(t_edges, amps)
-    tq, qq = step_xy(t_edges, amps / 2.0)
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 7.5), sharex=True)
+    # Okabe-Ito palette (colorblind-safe); linestyle adds redundant
+    # encoding beyond hue. No in-figure titles — the caption in
+    # extended-mode.md carries the panel descriptions.
+    c_signal, c_env, c_ref, c_thr, c_mark = "#8f8f8f", "#0072B2", "#D55E00", "#009E73", "#666666"
 
-    # Panel 1: signal, envelope, adapting reference.
-    colors = ("#e8f0e8", "#e8f0ff", "#fff0e8")
-    for (a0, a1, _), c in zip(PHASES, colors, strict=False):
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 7.5), sharex=True, constrained_layout=True)
+
+    # Panel A: signal, envelope, adapting reference.
+    shades = ("#eef1ee", "#eaf0f7", "#f7efe8")
+    for (a0, a1, _), c in zip(PHASES, shades, strict=False):
         ax1.axvspan(a0, a1, color=c, lw=0)
-    ax1.plot(t[::3], x[::3], color="#b0b6bd", lw=0.5, label="signal x")
-    ax1.plot(t[::3], q[::3], color="#1f77b4", lw=1.2, label="smoothed envelope q")
-    ax1.plot(ts, ys, color="#d62728", ls="--", lw=1.5, label="max_amplitude (reference)")
+    ax1.plot(t[::3], x[::3], color=c_signal, lw=0.5, label="signal x")
+    ax1.plot(t[::3], q[::3], color=c_env, lw=1.2, label="smoothed envelope q")
+    ax1.plot(ts, ys, color=c_ref, ls="--", lw=1.5, label="max_amplitude (reference)")
     ax1.annotate("peak 1.5", xy=(1.05, 1.5), xytext=(0.78, 2.35), arrowprops={"arrowstyle": "->"}, fontsize=9)
     ax1.annotate("peak 3.5", xy=(1.85, 3.5), xytext=(1.45, 4.35), arrowprops={"arrowstyle": "->"}, fontsize=9)
-    ax1.set_ylabel("amplitude")
-    ax1.legend(loc="upper left", fontsize=8)
-    ax1.set_title("Auto-calibrated amplitude reference ($max\\_amplitude$)", fontsize=10)
+    ax1.set_ylabel("amplitude", fontsize=9)
+    ax1.tick_params(labelsize=8)
+    ax1.legend(loc="upper left", fontsize=8, frameon=False)
+    ax1.set_title("A", loc="left", fontweight="bold", fontsize=10)
 
-    # Panel 2: envelope and threshold grid in dB — each calibration shifts
+    # Panel B: envelope and threshold grid in dB — each calibration shifts
     # the grid by +6.02 dB (thresholds x2).
     db_env = 20.0 * np.log10(np.maximum(q, 1e-6))
-    ax2.plot(t[::3], db_env[::3], color="#1f77b4", lw=1.0, label="envelope $20\\log_{10} q$")
+    ax2.plot(t[::3], db_env[::3], color=c_env, lw=1.0, label="envelope $20\\log_{10} q$")
     for k in (1, 2, 3, 4):
         tk, yk = step_xy(t_edges, 20.0 * np.log10(np.maximum(amps / (2.0**k), 1e-6)))
-        ax2.plot(tk, yk, color="#2ca02c", lw=1.0, alpha=0.85 if k == 1 else 0.45)
-    ax2.plot([], [], color="#2ca02c", lw=1.0, label="thresholds $c_k = max\\_amplitude \\cdot 2^{-k}$")
+        ax2.plot(tk, yk, color=c_thr, lw=1.0, alpha=0.85 if k == 1 else 0.45)
+    ax2.plot([], [], color=c_thr, lw=1.0, label="thresholds $c_k = max\\_amplitude \\cdot 2^{-k}$")
     for tc in (0.7, 1.4):
-        ax2.axvline(tc, color="#999", ls=":", lw=1.0)
-    ax2.annotate("+6.02 dB\n(thresholds \u00d72)", xy=(0.7, 8.0), xytext=(0.32, 9.5), fontsize=9, arrowprops={"arrowstyle": "->"})
-    ax2.annotate("+6.02 dB\n(thresholds \u00d72)", xy=(1.4, 8.0), xytext=(1.02, 9.5), fontsize=9, arrowprops={"arrowstyle": "->"})
+        ax2.axvline(tc, color=c_mark, ls=":", lw=1.0)
+    ax2.annotate("+6.02 dB\n(thresholds \u00d72)", xy=(0.7, 8.0), xytext=(0.32, 9.5), fontsize=11, arrowprops={"arrowstyle": "->"})
+    ax2.annotate("+6.02 dB\n(thresholds \u00d72)", xy=(1.4, 8.0), xytext=(1.02, 9.5), fontsize=11, arrowprops={"arrowstyle": "->"})
     ax2.set_ylim(-90, 14)
     ax2.set_xlim(0.0, PHASES[-1][1])
-    ax2.set_ylabel("level re 1.0 (dB)")
-    ax2.set_xlabel("time (s)")
+    ax2.set_ylabel("level re 1.0 (dB)", fontsize=12)
+    ax2.set_xlabel("time (s)", fontsize=12)
+    ax2.tick_params(labelsize=10)
     ax2.set_xticks([0.0, 0.7, 1.4, 2.1])
-    ax2.legend(loc="lower left", fontsize=8)
+    ax2.legend(loc="lower left", fontsize=10, frameon=False)
+    ax2.set_title("B", loc="left", fontweight="bold", fontsize=12)
 
-    fig.tight_layout()
     plt.savefig(OUT)
     plt.close(fig)
 
