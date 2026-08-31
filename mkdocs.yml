@@ -77,6 +77,12 @@ nav:
   - ASL method: reference/asl-method.md
   - Pre-filter bands: reference/prefilter-bands.md
   - Measuring above full scale: reference/extended-mode.md
+  - Architecture:
+      - Decisions (ADRs):
+          - 0001 — Rust core via PyO3: architecture/decisions/0001-rust-pyo3-core.md
+          - 0002 — Sample-exact filtering, no FFT: architecture/decisions/0002-sample-exact-no-fft.md
+          - 0003 — Extended mode auto-calibration: architecture/decisions/0003-extended-mode-auto-calibration.md
+          - 0004 — MkDocs Material for documentation: architecture/decisions/0004-mkdocs-material.md
   - Development:
       - Contributing: contributing.md
       - Code of Conduct: code_of_conduct.md
@@ -136,7 +142,10 @@ markdown_extensions:
         formatter: !!python/name:markdown_exec.formatter
       - name: math
         class: arithmatex
-        format: !!python/name:pymdownx.arithmatex.fence_generic_format
+        format: !!python/name:pymdownx.arithmatex.arithmatex_fenced_format
+      - name: mermaid
+        class: mermaid
+        format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist:

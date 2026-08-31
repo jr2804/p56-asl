@@ -19,21 +19,49 @@ Measures the active speech level of a WAV file. Aliases: `calc`,
 p56-asl measure INPUT.wav [OPTIONS]
 ```
 
-```text
-File: speech.wav
-Sample rate: 16000 Hz
-Pre-filter: NB
-Channel 1:
-  Active speech level: -18.71 dB
-  Activity factor:     99.1 %
-  RMS level:           -18.75 dB
-  ...
-```
+Output formats via `--format`/`-f`:
 
-Use `--format json` for machine-readable output; the payload contains the
-per-channel `active_speech_level_db`, `activity_factor`, `rms_db`,
-`dc_level`, `peak_positive`, `peak_negative`, `peak_abs`, `sample_count`
-(at the analysis rate) and `sample_rate`.
+=== "text (default)"
+
+    ```text
+    File: speech.wav
+    Sample rate: 16000 Hz
+    Channel 1:
+      Active speech level: -25.02 dB
+      Activity factor:     90.0 %
+      RMS level:           -25.48 dB
+      DC level:            +0.000277
+      Peak positive:       +0.980743
+      Peak negative:       -0.613037
+      Peak abs:            +0.980743
+      Samples:             105472
+    ```
+
+=== "json"
+
+    Machine-readable payload with per-channel results at the analysis rate:
+
+    ```json
+    {
+      "file": "speech.wav",
+      "pre_filter": null,
+      "channels": [1],
+      "results": [
+        {
+          "channel": 1,
+          "active_speech_level_db": -25.022884533542687,
+          "activity_factor": 0.9004373859222891,
+          "rms_db": -25.478349348593284,
+          "dc_level": 0.0002773950979547593,
+          "peak_positive": 0.980743408203125,
+          "peak_negative": -0.613037109375,
+          "peak_abs": 0.980743408203125,
+          "sample_count": 105472,
+          "sample_rate": 16000
+        }
+      ]
+    }
+    ```
 
 ## calibrate
 
@@ -62,8 +90,6 @@ Both commands accept:
 | `--time-duration`| to end of file | Length of the analysis window (s).                                 |
 | `--channels`     | all channels   | 1-indexed channel or comma list, e.g. `1`, `1,2`, `2, 4`; blanks around separators are tolerated. |
 | `--subtype`      | input subtype  | `calibrate` output libsndfile subtype (e.g. `PCM_16`, `PCM_24`, `FLOAT`, `DOUBLE`, `FLAC`); the container follows the output extension. |
-
-`measure` additionally accepts `--format`/`-f` (`text` or `json`).
 
 ## Supported WAV formats
 

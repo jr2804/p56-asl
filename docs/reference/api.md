@@ -36,9 +36,15 @@ ActiveSpeechLevelMeter(
 | Parameter       | Default | Description                                                              |
 | --------------- | ------- | ------------------------------------------------------------------------ |
 | `sample_rate`   | `8000`  | Analysis sample rate in Hz.                                              |
-| `block_size`    | `256`   | Upper bound on the chunk length accepted by `process_block` (defensive guard, not an algorithmic parameter). |
+| `block_size`    | `256`   | Upper bound on the chunk length accepted by `process_block`.              |
 | `max_amplitude` | `1.0`   | Amplitude reference; the histogram grid spans `max_amplitude / 2` downward in −6.02 dB steps. |
 | `auto_calibrate`| `False` | Extended mode: double `max_amplitude` (and shift the grid +6.02 dB) whenever a block peak exceeds it. |
+
+!!! note "`block_size` is a guard, not a window"
+
+    Feeding one large block or many small ones is bit-identical: all
+    algorithmic state (envelope filters, histogram, accumulators) carries
+    across calls. `block_size` only bounds per-call buffer length.
 
 ### Methods
 
@@ -96,6 +102,11 @@ filtered = pf.process(block)     # NDArray[np.float32]
 | `process(samples) -> NDArray[np.float32]` | Apply the filter; the input array is processed in place and returned. |
 | `reset()`                  | Clear the filter state (the sections keep their coefficients). |
 | `response_db(f) -> float`  | Magnitude response at frequency `f` in dB (verification aid). |
+
+!!! warning "In-place filtering"
+
+    `PreFilter.process` modifies the caller's buffer and returns it. Pass
+    `samples.copy()` if you need the original signal afterwards.
 
 ### Properties
 

@@ -6,7 +6,10 @@
 # Global configuration options
 [global]
 # List of rules to disable (uncomment and modify as needed)
-disable = ["MD033"]
+# MD033: inline HTML allowed (MathJax/mermaid markup in prose)
+# MD046: pymdownx.tabbed containers require 4-space-indented code blocks;
+#        the forced-fenced fixer strips that indentation and breaks tabs
+disable = ["MD033", "MD046"]
 
 # List of rules to enable exclusively (replaces defaults; only these rules will run)
 # enable = ["MD001", "MD003", "MD004"]

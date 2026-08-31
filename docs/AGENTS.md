@@ -37,6 +37,26 @@ math, figures, and verification of everything under `docs/`.
   `license.md`.
 - Executable examples: fenced block with `python exec="yes"` (markdown-exec),
   e.g. `credits.md` runs `scripts/gen_credits.py`.
+- **Admonitions** (`!!! note/tip/warning "Title"`) for genuine sidebars:
+  hard constraints (`warning`), non-obvious guarantees (`tip`), clarifying
+  context (`note`). Do not use them to restate what a nearby table row or
+  paragraph already says.
+- **Content tabs** (`=== "Tab"`) group alternatives (CLI output formats,
+  tool variants). Keep each tab's body indented 4 spaces.
+- **Diagrams**: draw pipelines/state/flows as ` ```mermaid ` fenced blocks
+  (fence configured in `mkdocs.yml` superfences). A diagram supplements the
+  prose — keep the prose as the normative description.
+- Paragraphs ≤ 3–4 sentences; lead with the takeaway; no filler openers.
+
+### Architecture Decision Records
+
+- ADRs live in `docs/architecture/decisions/`, named
+  `NNNN-short-slug.md`, numbered sequentially (next: `0005`).
+- Template: title + **Date**/**Status** lines, then `## Context`,
+  `## Decision`, `## Consequences` (Nygard style — see existing ADRs).
+- New ADRs must be added to the `nav` (`Architecture → Decisions (ADRs)`).
+- Record decisions that are costly to reverse or rediscover (toolchain,
+  exactness contracts, algorithm contracts) — not routine changes.
 
 ### Math style
 

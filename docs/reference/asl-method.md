@@ -21,8 +21,18 @@ material.
 
 ## The three processes
 
-P.56 models the measurement as three cascaded processes applied to the input
-signal $x[n]$:
+P.56 models the measurement as three cascaded processes applied to the
+input signal $x[n]$:
+
+```mermaid
+graph TD
+    A["Input signal x[n]"] --> B["Process 1: rectification and squaring"]
+    B --> C["Process 2: envelope detection — cascade of two 1st-order lowpass"]
+    C --> D["Process 3: threshold histogram and hangover"]
+    D --> E{Margin criterion met?<br>L_j − 20log₁₀ c_j ≥ 15.9 dB}
+    E -->|Yes| F[Active speech level L + activity factor]
+    E -->|No| G[Report silence −100 dB]
+```
 
 **Process 1 — rectification and second-moment integration.** The signal
 is squared and integrated to track the long-term energy. The total
@@ -90,11 +100,15 @@ and implemented in [`constants.rs`]:
   dBov, i.e. dB relative to overload). Passing an explicit physical scale
   (e.g. `max_amplitude = 0.7746` for dBm into 600 Ω) yields dBm0/dBPa.
 - Bit depth enters once: it sets the histogram span (one threshold per bit).
-  The meter is float-only internally (like the reference P.56): integer
-  WAV files are normalized to float32 at the reader boundary (soundfile
+  The meter is float-only internally (like the reference P.56); the CLI
+  normalizes integer WAV data to float32 at the reader boundary (soundfile
   divides by 127/32767/8388607/2147483647 for 8/16/24/32-bit files).
-- Supported input dtypes: float32/float64 numpy arrays (integer arrays are
-  rejected; convert them at the boundary, e.g. by reading via soundfile).
+
+!!! warning "Float-only input"
+
+    The library accepts `float32`/`float64` arrays only and rejects integer
+    dtypes with a `TypeError`. Normalize at the boundary — reading via
+    soundfile does this automatically.
 
 ## Meter requirements behind the method
 

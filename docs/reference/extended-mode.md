@@ -46,12 +46,18 @@ covers the peak, and the histogram follows:
 - the new top bins, which cover levels no earlier sample could reach,
   start fresh.
 
+The calibration exists so the grid *covers* the signal — it never changes
+what is measured, only the resolution at the loud end.
+
+!!! tip "Measurement invariance"
+
+```text
 Because the counters stay attached to their absolute levels, the
-measurement itself is unaffected by the shifts: the reported active level,
-activity factor and RMS are identical to what the meter would have
-reported had the reference been configured to the final value from the
-start. The calibration exists so the grid *covers* the signal — it never
-changes what is measured, only the resolution at the loud end.
+reported active level, activity factor and RMS are identical to what
+the meter would have reported with the reference configured to the
+final value from the start — pinned by a bit-identical comparison of
+auto-calibrated vs. fixed-reference runs in the test suite.
+```
 
 The extended mode is a library option; the CLI does not expose it:
 

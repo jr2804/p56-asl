@@ -5,7 +5,9 @@ project structure or tooling changes significantly.
 
 ## Project
 
-An extended version of the ITU-T Rec. P.56 Active Speech Level (ASL). Complies with reference C-implementation but re-implemented in Rust and MIT-licensed. Full docs at `README.md` or `docs/`.
+An extended version of the ITU-T Rec. P.56 Active Speech Level (ASL).
+Complies with reference C-implementation but re-implemented in Rust and
+MIT-licensed. Full docs at `README.md` or `docs/`.
 
 ## Quick start
 
