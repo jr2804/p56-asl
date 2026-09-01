@@ -49,7 +49,21 @@ jobs:
     - name: Setup mise
       uses: jdx/mise-action@v2
       with:
-        install: true
+        install: false
+
+    # mise install pulls ~28 tools from npm/PyPI/GitHub; transient runner
+    # network errors killed Windows jobs — retry instead of failing.
+    - name: Install mise tools
+      run: |
+        for i in 1 2 3; do
+          if mise install; then
+            break
+          elif [ "$i" = 3 ]; then
+            exit 1
+          fi
+          echo "mise install failed (attempt $i), retrying in 30s"
+          sleep 30
+        done
 
     - name: Install dependencies
       run: mise dev
@@ -101,7 +115,20 @@ jobs:
     - name: Setup mise
       uses: jdx/mise-action@v2
       with:
-        install: true
+        install: false
+
+    # Retry: see quality job.
+    - name: Install mise tools
+      run: |
+        for i in 1 2 3; do
+          if mise install; then
+            break
+          elif [ "$i" = 3 ]; then
+            exit 1
+          fi
+          echo "mise install failed (attempt $i), retrying in 30s"
+          sleep 30
+        done
 
     - name: Install dependencies
       run: mise dev
@@ -137,7 +164,20 @@ jobs:
     - name: Setup mise
       uses: jdx/mise-action@v2
       with:
-        install: true
+        install: false
+
+    # Retry: see quality job.
+    - name: Install mise tools
+      run: |
+        for i in 1 2 3; do
+          if mise install; then
+            break
+          elif [ "$i" = 3 ]; then
+            exit 1
+          fi
+          echo "mise install failed (attempt $i), retrying in 30s"
+          sleep 30
+        done
 
     - name: Install dependencies
       run: mise dev
