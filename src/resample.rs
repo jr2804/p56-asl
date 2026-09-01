@@ -55,8 +55,7 @@ impl Resampler {
             });
         }
         let resampler =
-            FftFixedIn::<f32>::new(sample_rate as usize, target_rate as usize, CHUNK_SIZE, 1, 1)
-                .map_err(|e| Error::Resampler(e.to_string()))?;
+            FftFixedIn::<f32>::new(sample_rate as usize, target_rate as usize, CHUNK_SIZE, 1, 1)?;
         Ok(Self {
             resampler,
             pending: Vec::with_capacity(CHUNK_SIZE),
@@ -72,7 +71,7 @@ impl Resampler {
     /// call order. May be empty until a full chunk accumulates.
     pub fn process(&mut self, samples: &[f32]) -> Result<Vec<f32>> {
         if self.flushed {
-            return Err(Error::Resampler(
+            return Err(Error::ResamplerState(
                 "process() called after flush()".to_string(),
             ));
         }
@@ -80,10 +79,7 @@ impl Resampler {
         let mut out = std::mem::take(&mut self.output_queue);
         while self.pending.len() >= CHUNK_SIZE {
             let chunk: Vec<f32> = self.pending.drain(..CHUNK_SIZE).collect();
-            let waves = self
-                .resampler
-                .process(&[chunk], None)
-                .map_err(|e| Error::Resampler(e.to_string()))?;
+            let waves = self.resampler.process(&[chunk], None)?;
             // mono: exactly one channel
             out.extend_from_slice(&waves[0]);
         }
@@ -110,10 +106,7 @@ impl Resampler {
         if !self.pending.is_empty() {
             let mut chunk = self.pending.clone();
             chunk.resize(CHUNK_SIZE, 0.0);
-            let waves = self
-                .resampler
-                .process(&[chunk], None)
-                .map_err(|e| Error::Resampler(e.to_string()))?;
+            let waves = self.resampler.process(&[chunk], None)?;
             out.extend_from_slice(&waves[0]);
         }
         self.pending.clear();
@@ -122,10 +115,7 @@ impl Resampler {
         let mut guard = 0;
         while self.delivered + out.len() < expected && guard < CHUNK_SIZE {
             let zeros = vec![0.0f32; CHUNK_SIZE];
-            let waves = self
-                .resampler
-                .process(&[zeros], None)
-                .map_err(|e| Error::Resampler(e.to_string()))?;
+            let waves = self.resampler.process(&[zeros], None)?;
             sent += CHUNK_SIZE;
             let produced = waves[0].len();
             out.extend_from_slice(&waves[0]);

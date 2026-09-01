@@ -366,16 +366,16 @@ mod tests {
     #[test]
     fn finish_without_samples_errors() {
         let m = meter(16);
-        assert_eq!(m.finish(), Err(Error::NoSamples));
+        assert!(matches!(m.finish(), Err(Error::NoSamples)));
     }
 
     #[test]
     fn oversized_block_rejected() {
         let mut m = meter(16);
-        assert_eq!(
+        assert!(matches!(
             m.process_block(&[0.0; 257]),
             Err(Error::InvalidBlockSize { block_size: 257 })
-        );
+        ));
     }
 
     #[test]
@@ -385,7 +385,7 @@ mod tests {
         m.reset();
         // After reset no samples have been processed; `finish` must error
         // exactly like a fresh meter (see `finish_without_samples_errors`).
-        assert_eq!(m.finish(), Err(Error::NoSamples));
+        assert!(matches!(m.finish(), Err(Error::NoSamples)));
         m.process_block(&[0.0; 256]).unwrap();
         let meas = m.finish().unwrap();
         assert_eq!(meas.active_speech_level_db, SILENCE_LEVEL_DB);
@@ -437,10 +437,7 @@ mod tests {
             auto_calibrate: true,
         })
         .unwrap();
-        let mut block = [0.0f32; 256];
-        for s in block.iter_mut() {
-            *s = 0.5;
-        }
+        let block = [0.5f32; 256];
         m.process_block(&block).unwrap();
         // Pre-calibration block: no scale-up, activity recorded on base grid.
         assert_eq!(m.max_amplitude, 1.0);
@@ -450,10 +447,7 @@ mod tests {
         // the 0.5 tail of the previous block keeps `max` at 0.5, but the
         // envelope-filtered peak from this block plus the 2.5 samples
         // themselves drive `max` to 2.5 → 1 → 2 → 4).
-        let mut peak_block = [0.0f32; 256];
-        for s in peak_block.iter_mut() {
-            *s = 2.5;
-        }
+        let peak_block = [2.5f32; 256];
         m.process_block(&peak_block).unwrap();
         assert_eq!(m.max_amplitude, 4.0);
         // The triggering block's envelope (2.5) must have been counted

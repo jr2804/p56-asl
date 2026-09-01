@@ -41,7 +41,14 @@ fn samples_to_f32(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Vec<f32>> 
                 .clone()
                 .downcast_into::<PyArray1<$ty>>()
                 .expect("dtype checked above");
-            unsafe { a.as_slice()? }.iter().map(|v| *v as f32).collect()
+            // readonly().as_array() panics on negative strides; keep the
+            // old clean-error behavior instead.
+            if a.strides().iter().any(|&s| s < 0) {
+                return Err(PyValueError::new_err(
+                    "samples must not have negative strides (pass a copy, e.g. np.ascontiguousarray)",
+                ));
+            }
+            a.readonly().as_array().iter().map(|v| *v as f32).collect()
         }};
     }
     if dtype.is_equiv_to(&numpy::dtype::<f32>(py)) {
