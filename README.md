@@ -82,7 +82,7 @@ all options.
 Full documentation with API reference, architecture decisions, and the P.56
 method explanation is available at:
 
-→ **<https://jr2804.github.io/p56-asl**>
+→ **[jr2804.github.io/p56-asl](https://jr2804.github.io/p56-asl)**
 
 ## Development
 
