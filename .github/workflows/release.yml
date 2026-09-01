@@ -80,6 +80,8 @@ jobs:
       if: steps.version.outputs.needs_tag == 'true'
       run: |
         set -euo pipefail
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         version="${{ steps.version.outputs.version }}"
         git tag -a "$version" -m "Release $version"
         git push origin "$version"
