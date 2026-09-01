@@ -1,10 +1,18 @@
-# Extended ITU-T Rec. P.56 - Active Speech Level (ASL)
+# p56-asl
 
-> An extended version of the ITU-T Rec. P.56 Active Speech Level (ASL). Complies with reference C-implementation but re-implemented in Rust and MIT-licensed.
+**p56-asl** is a Python library and CLI for measuring active speech level (ASL)
+according to [ITU-T Rec. P.56](https://www.itu.int/rec/T-REC-P.56) — the standard
+used in telecom voice-quality testing. It combines a high-performance Rust core
+with Python bindings, giving you both a programmatic API and a scriptable
+command-line tool.
+
+> Unlike most P.56 implementations, this one is **bit-exact with the ITU
+> reference C code** (validated against G.191 test vectors) while remaining
+> MIT-licensed and pip-installable.
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
-  <a href="#"><img alt="Python 3.13+" src="https://img.shields.io/badge/python-3.13%2B-3776ab?logo=python"></a>
+  <a href="https://pypi.org/project/p56-asl/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-p56--asl-3776ab?logo=python"></a>
   <a href="https://jr2804.github.io/p56-asl/license/"><img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg"></a>
   <a href="https://github.com/jr2804/p56-asl/actions"><img alt="CI" src="https://github.com/jr2804/p56-asl/actions/workflows/ci.yml/badge.svg"></a>
 </p>
@@ -12,131 +20,85 @@
 
 ---
 
+## Features
+
+- **Bit-Exact P.56 Compliance**: Validated against ITU-T G.191 reference test
+  vectors — the same algorithm telecom labs use.
+- **Extended Measurement Mode**: Measures above full-scale signals (up to +40 dB)
+  with automatic calibration — the standard P.56 cannot do this.
+- **Three Interfaces**: Python library, CLI tool, and direct Rust API — use
+  whatever fits your pipeline.
+- **High Performance**: Rust core handles multi-gigabyte WAV files without loading
+  them fully into memory.
+- **Flexible I/O**: Reads any format [soundfile](https://python-soundfile.readthedocs.io/)
+  supports (WAV, FLAC, OGG) and resamples to 16 kHz automatically when needed.
+
+## Installation
+
+```bash
+pip install p56-asl
+```
+
+Requires Python 3.13+.
+
 ## Quick Start
 
-```bash
-# Clone and set up
-git clone https://github.com/jr2804/p56-asl.git
-cd p56-asl
-mise dev
+### Python API
+
+```python
+from p56_asl import ActiveSpeechLevelMeter
+import soundfile as sf
+
+# Read a mono WAV file
+samples, sr = sf.read("input.wav", dtype="float32")
+
+# Measure active speech level
+meter = ActiveSpeechLevelMeter(sample_rate=sr)
+meter.process_block(samples)
+result = meter.finish()
+
+print(f"ASL: {result.active_speech_level_db:.2f} dB")
+print(f"Activity factor: {result.activity_factor:.2%}")
 ```
 
-## Usage
-
-### Running Tests
+### CLI
 
 ```bash
-mise test
-# or
-uv run pytest
+# Measure a WAV file
+p56-asl measure input.wav
+
+# JSON output with options
+p56-asl measure input.wav --pre-filter nb --format json
+
+# Calibrate (amplify by +3.01 dB)
+p56-asl calibrate input.wav 3.01 output.wav
 ```
 
-### Code Quality
+See the [CLI reference](https://jr2804.github.io/p56-asl/reference/cli/) for
+all options.
 
-```bash
-mise lint       # ruff + ty + codespell
-mise format     # ruff format + isort
-mise all        # test + lint + format in one pass
-```
+## Documentation
 
-### CLI Commands
+Full documentation with API reference, architecture decisions, and the P.56
+method explanation is available at:
 
-```bash
-uv run p56-asl --help         # app/script entry
-uv run -m p56_asl --help      # module entry
-uv run p56-asl --version      # show version
-
-# Measure the active speech level (aliases: calc, calculate)
-uv run p56-asl measure input.wav
-uv run p56-asl measure input.wav --pre-filter nb --format json
-uv run p56-asl measure input.wav --fs 16000 --channels "1, 2" --time-start 0.5
-
-# Calibrate by a dB gain (alias: scale); no sign means +
-uv run p56-asl calibrate input.wav 3.01 output.wav   # +3.01 dB
-uv run p56-asl calibrate input.wav -3.01             # in place, -3.01 dB
-```
-
-See the [CLI reference](https://jr2804.github.io/p56-asl/reference/cli/) for all options.
+→ **<https://jr2804.github.io/p56-asl**>
 
 ## Development
 
-### Pre-commit Hooks
-
 ```bash
-pre-commit install
-pre-commit run --all-files
+git clone https://github.com/jr2804/p56-asl.git
+cd p56-asl
+mise dev          # install tools + deps
+mise test         # run test suite
+mise lint         # ruff + ty + codespell
+mise docs-serve   # live preview at http://localhost:8000
 ```
 
-### Documentation
-
-```bash
-mise docs-serve          # live preview at http://localhost:8000
-mise docs-build          # build static site to site/
-```
-
-## CI/CD
-
-GitHub Actions runs on every push and PR:
-
-| Workflow | Triggers | Jobs |
-|----------|----------|------|
-| **CI** (`ci.yml`) | push, PR to main | test matrix (3.13, 3.14) + lint + type-check |
-| **Release** (`release.yml`) | tag `v*` | build + publish to PyPI |
-
-## AI Dev-Features
-
-This project includes optional AI-agent tooling. After `mise dev`, install with:
-
-```bash
-mise run add-mcp-servers <agent>   # register MCP servers (claude, codex, gemini, ...)
-mise run add-skills                # install agent skills
-```
-
-Enabled dev-features are listed in `.config/mise/conf.d/mcp.toml` and
-`.config/mise/conf.d/skills.toml`.
-
-## Project Structure
-
-```text
-p56-asl/
-├── .config/mise/               # mise task definitions
-├── .github/workflows/          # CI + release workflows
-├── docs/                       # MkDocs documentation
-├── src/p56_asl/     # Source package
-│   ├── __init__.py
-│   ├── __about__.py
-│   └── cli/
-│       ├── __init__.py
-│       ├── app.py
-│       ├── args.py
-│       └── commands.py
-├── tests/                      # Test suite
-├── .copier-answers.yml         # Template version tracking
-├── pyproject.toml              # uv + hatch + pytest config
-├── ruff.toml                   # Linter + formatter config
-├── ty.toml                     # Type checker config
-└── README.md
-```
-
-## Tech Stack
-
-| Layer | Tool | Purpose |
-|-------|------|---------|
-| Package manager | [uv](https://docs.astral.sh/uv/) | Fast installs, deterministic lockfile |
-| Task runner | [mise](https://mise.jdx.dev/) | DAG-based tasks, tool version management |
-| Linter + formatter | [ruff](https://docs.astral.sh/ruff/) | Single-binary code quality |
-| Type checker | [ty](https://github.com/google/ty) | Strict type checking |
-| Testing | [pytest](https://pytest.org/) | Test framework with 100% coverage gate |
-| Spell check | [codespell](https://github.com/codespell-project/codespell) | Code and doc spell checking |
-| Documentation | [MkDocs Material](https://github.com/squidfunk/mkdocs-material) | Static site with auto-generated API + executable examples |
-| Versioning | [uv-dynamic-versioning](https://github.com/ninoseki/uv-dynamic-versioning) | Git tag-based versioning |
-| Hooks | [pre-commit](https://pre-commit.com/) | Automated quality gate |
-| CI/CD | GitHub Actions | Test matrix + PyPI release |
+Pre-commit hooks, contributing guidelines, and the full tech stack are
+documented in the [Contributing guide](https://jr2804.github.io/p56-asl/contributing/).
 
 ## License
 
-MIT — see the [license page](https://jr2804.github.io/p56-asl/license/) for details.
-
----
-
-Generated from [copier-uv-plus](https://codeberg.org/jr2804/copier-uv-plus).
+MIT — see the [license page](https://jr2804.github.io/p56-asl/license/) for
+details.
