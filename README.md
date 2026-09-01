@@ -5,7 +5,7 @@
 <!-- markdownlint-disable MD033 -->
 <p align="center">
   <a href="#"><img alt="Python 3.13+" src="https://img.shields.io/badge/python-3.13%2B-3776ab?logo=python"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg"></a>
+  <a href="https://jr2804.github.io/p56-asl/license/"><img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg"></a>
   <a href="https://github.com/jr2804/p56-asl/actions"><img alt="CI" src="https://github.com/jr2804/p56-asl/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 <!-- markdownlint-enable MD033 -->
@@ -56,7 +56,7 @@ uv run p56-asl calibrate input.wav 3.01 output.wav   # +3.01 dB
 uv run p56-asl calibrate input.wav -3.01             # in place, -3.01 dB
 ```
 
-See `docs/reference/cli.md` for all options.
+See the [CLI reference](https://jr2804.github.io/p56-asl/reference/cli/) for all options.
 
 ## Development
 
@@ -135,7 +135,7 @@ p56-asl/
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT — see the [license page](https://jr2804.github.io/p56-asl/license/) for details.
 
 ---
 
