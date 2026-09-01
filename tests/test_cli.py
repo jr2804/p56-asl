@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import importlib.metadata as md
 import json
+import re
 import runpy
 from pathlib import Path
 
@@ -394,7 +395,10 @@ def test_calibrate_invalid_prefilter(tmp_path: Path) -> None:
     _write(src, _speech())
     result = runner.invoke(app, ["calibrate", str(src), "0", str(dst), "--pre-filter", "bad"])
     assert result.exit_code != 0
-    assert "pre-filter" in result.output.lower()
+    # Strip ANSI styling: rich may wrap the flag token in escape sequences,
+    # splitting the literal substring "pre-filter" across style runs.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output).lower()
+    assert "pre-filter" in plain
 
 
 def test_measure_invalid_prefilter(tmp_path: Path) -> None:
