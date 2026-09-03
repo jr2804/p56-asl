@@ -11,8 +11,8 @@ name = "_native"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-numpy = "0.23"
-pyo3 = "0.23"
+numpy = "0.29"
+pyo3 = "0.29"
 rubato = { version = "0.16.2", default-features = false, features = ["fft_resampler"] }
 thiserror = "2"
 

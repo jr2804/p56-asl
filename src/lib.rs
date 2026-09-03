@@ -26,7 +26,7 @@ use pyo3::prelude::*;
 /// boundary by the reader (soundfile) before reaching the core.
 fn samples_to_f32(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Vec<f32>> {
     let arr: &Bound<'_, PyUntypedArray> = obj
-        .downcast()
+        .cast()
         .map_err(|_| PyValueError::new_err("samples must be a numpy array, not a list"))?;
     if arr.ndim() != 1 {
         return Err(PyValueError::new_err(format!(
@@ -39,7 +39,7 @@ fn samples_to_f32(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Vec<f32>> 
         ($ty:ty) => {{
             let a = obj
                 .clone()
-                .downcast_into::<PyArray1<$ty>>()
+                .cast_into::<PyArray1<$ty>>()
                 .expect("dtype checked above");
             // readonly().as_array() panics on negative strides; keep the
             // old clean-error behavior instead.
@@ -206,7 +206,7 @@ impl PyActiveSpeechLevelMeter {
 }
 
 /// Result of a completed measurement.
-#[pyclass(module = "p56_asl._native", name = "Measurement", frozen)]
+#[pyclass(module = "p56_asl._native", name = "Measurement", frozen, skip_from_py_object)]
 #[derive(Clone)]
 struct PyMeasurement {
     inner: actlevel::Measurement,

@@ -108,11 +108,23 @@ jobs:
           rm -f Cargo.toml.bak
           grep '^version' Cargo.toml
 
+      # Inside the manylinux container the runner's setup-python is not
+      # mounted; the container ships /opt/python/cpXY interpreters instead.
+      - name: Resolve interpreter
+        id: interp
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            py="python${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }}"
+          else
+            py="python"
+          fi
+          echo "interpreter=$py" >> "$GITHUB_OUTPUT"
+
       - name: Build wheel
         uses: PyO3/maturin-action@v1
         with:
           command: build
-          args: --release --interpreter python --out dist
+          args: --release --interpreter ${{ steps.interp.outputs.interpreter }} --out dist
           sccache: true
           manylinux: auto
 
