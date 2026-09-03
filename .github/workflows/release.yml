@@ -87,6 +87,10 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest, macos-15]
         python-version: ["3.13", "3.14"]
         freethreaded: [false, true]
+        # pyo3 0.29 supports free-threaded builds only on 3.14+.
+        exclude:
+          - python-version: "3.13"
+            freethreaded: true
     name: wheel ${{ matrix.os }} py${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }}
     runs-on: ${{ matrix.os }}
     steps:
