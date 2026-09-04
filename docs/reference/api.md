@@ -151,3 +151,4 @@ out += rs.flush()                # residual tail samples
 `p56-asl measure` and `p56-asl calibrate` — see the
 [CLI Reference](cli.md). The CLI applies the same Rust core; it does not
 currently expose `auto_calibrate` or the raw resampler/pre-filter objects.
+
