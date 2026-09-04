@@ -22,7 +22,6 @@ env:
   LC_ALL: en_US.utf-8
   PYTHONIOENCODING: UTF-8
   PYTHONWARNDEFAULTENCODING: "1"
-  MISE_CONFIG_FILE: .config/mise/ci.toml
 
 jobs:
 
