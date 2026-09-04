@@ -51,12 +51,12 @@ jobs:
       with:
         install: false
 
-    # mise install pulls ~28 tools from npm/PyPI/GitHub; transient runner
-    # network errors killed Windows jobs — retry instead of failing.
-    - name: Install mise tools
+    # Only install what CI needs; the full config.toml has agent dev tools
+    # that pull from codeberg/npm/github and timeout on Windows runners.
+    - name: Install CI tools
       run: |
         for i in 1 2 3; do
-          if mise install; then
+          if mise install rust ruff ty rumdl cargo-dist cargo-make codespell; then
             break
           elif [ "$i" = 3 ]; then
             exit 1
@@ -90,7 +90,6 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -101,7 +100,6 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v6
       with:
-
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
 
@@ -116,11 +114,10 @@ jobs:
       with:
         install: false
 
-    # Retry: see quality job.
-    - name: Install mise tools
+    - name: Install CI tools
       run: |
         for i in 1 2 3; do
-          if mise install; then
+          if mise install rust ruff ty rumdl cargo-dist cargo-make; then
             break
           elif [ "$i" = 3 ]; then
             exit 1
@@ -140,7 +137,6 @@ jobs:
     needs:
     - quality
     runs-on: ubuntu-latest
-
 
     steps:
     - name: Checkout
@@ -165,22 +161,9 @@ jobs:
       with:
         install: false
 
-    # Retry: see quality job.
-    - name: Install mise tools
-      run: |
-        for i in 1 2 3; do
-          if mise install; then
-            break
-          elif [ "$i" = 3 ]; then
-            exit 1
-          fi
-          echo "mise install failed (attempt $i), retrying in 30s"
-          sleep 30
-        done
-
+    # Docs job only needs uv — no mise tools required.
     - name: Install dependencies
       run: mise dev
 
-    - name: Build documentation
+    - name: Build docs
       run: mise docs
-
