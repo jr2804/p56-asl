@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - main
+    # Release only when the wheel would change (Rust/Python source, build
+    # config, or this workflow). Docs-only commits skip the release.
+    paths:
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pyproject.toml'
+      - '.github/workflows/release.yml'
   workflow_dispatch:
 
 concurrency:
