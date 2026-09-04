@@ -84,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest, macos-15]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.13", "3.14"]
         freethreaded: [false, true]
         # pyo3 0.29 supports free-threaded builds only on 3.14+.
@@ -136,6 +136,54 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  # macOS Intel (x86_64) wheels — cross-compiled on the arm64 runner because
+  # GitHub no longer offers Intel macOS hosted runners.
+  macos-intel:
+    needs: version
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13", "3.14"]
+        freethreaded: [false, true]
+        exclude:
+          - python-version: "3.13"
+            freethreaded: true
+    name: wheel macos-intel py${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }}
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          freethreaded: ${{ matrix.freethreaded }}
+
+      - name: Stamp release version into Cargo.toml
+        run: |
+          version="${{ needs.version.outputs.version }}"
+          version="${version%%.*}.$((10#$(echo "$version" | cut -d. -f2))).${version##*.}"
+          sed -i.bak "s/^version = \"0\\.0\\.0\"/version = \"${version}\"/" Cargo.toml
+          rm -f Cargo.toml.bak
+          grep '^version' Cargo.toml
+
+      - name: Build x86_64 wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --target x86_64-apple-darwin --interpreter python --out dist
+          sccache: true
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-macos-intel-py${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }}
           path: dist/*.whl
           if-no-files-found: error
 
