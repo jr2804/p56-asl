@@ -22,6 +22,7 @@ env:
   LC_ALL: en_US.utf-8
   PYTHONIOENCODING: UTF-8
   PYTHONWARNDEFAULTENCODING: "1"
+  MISE_CONFIG_FILE: .config/mise/ci.toml
 
 jobs:
 
@@ -51,12 +52,10 @@ jobs:
       with:
         install: false
 
-    # Only install what CI needs; the full config.toml has agent dev tools
-    # that pull from codeberg/npm/github and timeout on Windows runners.
     - name: Install CI tools
       run: |
         for i in 1 2 3; do
-          if mise install rust ruff ty rumdl cargo-dist cargo-make codespell; then
+          if mise install; then
             break
           elif [ "$i" = 3 ]; then
             exit 1
@@ -117,7 +116,7 @@ jobs:
     - name: Install CI tools
       run: |
         for i in 1 2 3; do
-          if mise install rust ruff ty rumdl cargo-dist cargo-make; then
+          if mise install; then
             break
           elif [ "$i" = 3 ]; then
             exit 1
