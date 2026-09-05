@@ -227,7 +227,7 @@ jobs:
 
   # Attach all artifacts to the GitHub release; publish to PyPI when a token exists.
   publish:
-    needs: [version, wheels, sdist]
+    needs: [version, wheels, macos-intel, sdist]
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
@@ -235,6 +235,11 @@ jobs:
     env:
       HAS_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN != '' }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -251,6 +256,29 @@ jobs:
           name: ${{ needs.version.outputs.version }}
           files: dist/*
           generate_release_notes: true
+
+      # Stamp the released version back into main so `uv add git+...` from
+      # HEAD reports the real version, not 0.0.0 (the per-job stamps above
+      # only exist in throwaway runner checkouts). GITHUB_TOKEN pushes do
+      # not re-trigger workflows, so this cannot loop.
+      - name: Stamp version back to main
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          version="${{ needs.version.outputs.version }}"
+          version="${version%%.*}.$((10#$(echo "$version" | cut -d. -f2))).${version##*.}"
+          current="$(sed -nE 's/^version = "([^"]*)"$/\1/p' Cargo.toml | head -n1)"
+          if [ "$current" = "$version" ]; then
+            echo "Cargo.toml already at $version, nothing to stamp"
+            exit 0
+          fi
+          sed -i.bak "s/^version = \"${current}\"/version = \"${version}\"/" Cargo.toml
+          rm -f Cargo.toml.bak
+          grep -q "^version = \"${version}\"$" Cargo.toml
+          git add Cargo.toml
+          git commit -m "chore(release): stamp $version"
+          git push origin main
 
       # Runs only after the PYPI_API_TOKEN secret is configured on the repo
       # (Settings → Secrets and variables → Actions). Until then wheels are
