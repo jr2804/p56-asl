@@ -1,6 +1,6 @@
 [package]
 name = "p56-asl-core"
-version = "0.0.0"
+version = "2026.9.7"
 edition = "2021"
 description = "Extended ITU-T Rec. P.56 Active Speech Level (ASL) core, Rust implementation"
 license = "MIT"
