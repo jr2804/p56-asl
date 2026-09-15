@@ -59,7 +59,12 @@ jobs:
           git fetch --tags --force
 
           prefix="${year}.${month}."
-          highest="$(git tag --list "${prefix}*" | sed -n "s/^${year}\\.${month}\\.\\([0-9][0-9]*\\)$/\\1/p" | sort -n | tail -n 1)"
+          padded_prefix="${year}.0${month}."
+          highest="$(
+            { git tag --list "${padded_prefix}*" "${prefix}*"; } \
+              | sed -nE "s/^${year}\\.(0)?${month}\\.([0-9][0-9]*)$/\\2/p" \
+              | sort -n | tail -n 1
+          )"
           counter="${highest:-0}"
           next="$((counter + 1))"
           version="${year}.${month}.${next}"
@@ -84,7 +89,10 @@ jobs:
           git tag -a "$version" -m "Release $version"
           git push origin "$version"
 
-  # Native wheels: {Windows, Linux, macOS (arm64 + Intel)} x {3.13, 3.14} x {GIL, free-threaded}.
+  # Native wheels: {Linux x86_64, Windows x64, macOS arm64} x {3.13, 3.14, 3.14t}.
+  # 3.13t is intentionally omitted: pyo3 0.29 (current pin) supports free-threaded
+  # builds only on Python 3.14+. Drop 3.14t here when bumping pyo3 to a version
+  # that drops free-threaded support.
   wheels:
     needs: version
     permissions:
@@ -93,13 +101,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.13", "3.14"]
-        freethreaded: [false, true]
-        # pyo3 0.29 supports free-threaded builds only on 3.14+.
-        exclude:
-          - python-version: "3.13"
-            freethreaded: true
-    name: wheel ${{ matrix.os }} py${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }}
+        python-version: ["3.13", "3.14", "3.14t"]
+    name: wheel ${{ matrix.os }} py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -109,7 +112,6 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-          freethreaded: ${{ matrix.freethreaded }}
 
       - name: Stamp release version into Cargo.toml
         run: |
@@ -121,12 +123,13 @@ jobs:
           grep '^version' Cargo.toml
 
       # Inside the manylinux container the runner's setup-python is not
-      # mounted; the container ships /opt/python/cpXY interpreters instead.
+      # mounted; the container ships /opt/python/cpXY-cpXYt interpreters
+      # instead. The trailing `t` selects the free-threaded build.
       - name: Resolve interpreter
         id: interp
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            py="python${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }}"
+            py="python${{ matrix.python-version }}"
           else
             py="python"
           fi
@@ -143,55 +146,7 @@ jobs:
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }}
-          path: dist/*.whl
-          if-no-files-found: error
-
-  # macOS Intel (x86_64) wheels — cross-compiled on the arm64 runner because
-  # GitHub no longer offers Intel macOS hosted runners.
-  macos-intel:
-    needs: version
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.13", "3.14"]
-        freethreaded: [false, true]
-        exclude:
-          - python-version: "3.13"
-            freethreaded: true
-    name: wheel macos-intel py${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }}
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ matrix.python-version }}
-          freethreaded: ${{ matrix.freethreaded }}
-
-      - name: Stamp release version into Cargo.toml
-        run: |
-          version="${{ needs.version.outputs.version }}"
-          version="${version%%.*}.$((10#$(echo "$version" | cut -d. -f2))).${version##*.}"
-          sed -i.bak "s/^version = \"0\\.0\\.0\"/version = \"${version}\"/" Cargo.toml
-          rm -f Cargo.toml.bak
-          grep '^version' Cargo.toml
-
-      - name: Build x86_64 wheel
-        uses: PyO3/maturin-action@v1
-        with:
-          command: build
-          args: --release --target x86_64-apple-darwin --interpreter python --out dist
-          sccache: true
-
-      - name: Upload wheel
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheel-macos-intel-py${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }}
+          name: wheel-${{ matrix.os }}-py${{ matrix.python-version }}
           path: dist/*.whl
           if-no-files-found: error
 
@@ -227,7 +182,7 @@ jobs:
 
   # Attach all artifacts to the GitHub release; publish to PyPI when a token exists.
   publish:
-    needs: [version, wheels, macos-intel, sdist]
+    needs: [version, wheels, sdist]
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
@@ -256,6 +211,36 @@ jobs:
           name: ${{ needs.version.outputs.version }}
           files: dist/*
           generate_release_notes: true
+
+      # One-time cleanup: delete padded-month legacy tags. p56-asl tagged
+      # #2026.09.1 ... #2026.09.13 before the workflow's CalVer logic settled
+      # on the unpadded format (#2026.9.N). Both refer to the same SHAs for
+      # #2026.09.7, but the rest (e.g. #2026.09.10 ... #2026.09.13) have no
+      # unpadded counterpart. After this run the unpadded format is canonical.
+      # Idempotent: re-running on a repo that has none returns cleanly.
+      # NOTE: GitHub Release pages for the deleted tags become orphaned but
+      # remain addressable by URL (releases/<id>). They are not auto-deleted.
+      - name: Delete legacy padded-month tags
+        if: github.event_name == 'push'  # safety: only auto-clean on push-to-main, not on workflow_dispatch replays
+        run: |
+          set -euo pipefail
+          year="$(date -u +%Y)"
+          # Padded-month tags: e.g. 2026.09.1, 2026.09.13. We only delete tags
+          # for the CURRENT year+month (to avoid wiping historical artefacts
+          # from older projects if this workflow is ever copied elsewhere).
+          legacy="$(git ls-remote --tags origin \
+            | awk '{ sub(/"\n/, ""); print $2 }' \
+            | grep -E "^refs/tags/${year}\.0[1-9]\.[0-9]+$" \
+            | sed 's#^refs/tags/##' || true)"
+          if [ -z "$legacy" ]; then
+            echo "No legacy padded-month tags to delete for ${year}."
+            exit 0
+          fi
+          echo "Deleting legacy tags:"
+          printf '  %s\n' $legacy
+          for tag in $legacy; do
+            git push origin ":refs/tags/${tag}"
+          done
 
       # Stamp the released version back into main so `uv add git+...` from
       # HEAD reports the real version, not 0.0.0 (the per-job stamps above
