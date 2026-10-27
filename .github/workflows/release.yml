@@ -118,9 +118,13 @@ jobs:
           version="${{ needs.version.outputs.version }}"
           # Normalize to Cargo-valid semver (strip month padding, e.g. 09 -> 9).
           version="${version%%.*}.$((10#$(echo "$version" | cut -d. -f2))).${version##*.}"
-          sed -i.bak "s/^version = \"0\\.0\\.0\"/version = \"${version}\"/" Cargo.toml
+          # Replace WHATEVER version is committed (main carries the last
+          # released version since the stamp-back step) and assert the stamp
+          # landed — a silent no-op ships mislabeled wheels.
+          current="$(sed -nE 's/^version = "([^"]*)"\r?$/\1/p' Cargo.toml | head -n1)"
+          sed -i.bak "s/^version = \"${current}\"/version = \"${version}\"/" Cargo.toml
           rm -f Cargo.toml.bak
-          grep '^version' Cargo.toml
+          grep -q "^version = \"${version}\"[[:space:]]*$" Cargo.toml
 
       # Inside the manylinux container the runner's setup-python is not
       # mounted; the container ships /opt/python/cpXY-cpXYt interpreters
@@ -164,8 +168,10 @@ jobs:
         run: |
           version="${{ needs.version.outputs.version }}"
           version="${version%%.*}.$((10#$(echo "$version" | cut -d. -f2))).${version##*.}"
-          sed -i.bak "s/^version = \"0\\.0\\.0\"/version = \"${version}\"/" Cargo.toml
+          current="$(sed -nE 's/^version = "([^"]*)"\r?$/\1/p' Cargo.toml | head -n1)"
+          sed -i.bak "s/^version = \"${current}\"/version = \"${version}\"/" Cargo.toml
           rm -f Cargo.toml.bak
+          grep -q "^version = \"${version}\"[[:space:]]*$" Cargo.toml
 
       - name: Build sdist
         uses: PyO3/maturin-action@v1
@@ -253,14 +259,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           version="${{ needs.version.outputs.version }}"
           version="${version%%.*}.$((10#$(echo "$version" | cut -d. -f2))).${version##*.}"
-          current="$(sed -nE 's/^version = "([^"]*)"$/\1/p' Cargo.toml | head -n1)"
+          current="$(sed -nE 's/^version = "([^"]*)"\r?$/\1/p' Cargo.toml | head -n1)"
           if [ "$current" = "$version" ]; then
             echo "Cargo.toml already at $version, nothing to stamp"
             exit 0
           fi
           sed -i.bak "s/^version = \"${current}\"/version = \"${version}\"/" Cargo.toml
           rm -f Cargo.toml.bak
-          grep -q "^version = \"${version}\"$" Cargo.toml
+          grep -q "^version = \"${version}\"[[:space:]]*$" Cargo.toml
           git add Cargo.toml
           git commit -m "chore(release): stamp $version"
           git push origin main
