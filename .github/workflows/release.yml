@@ -187,8 +187,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      HAS_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN != '' }}
+      # OIDC token for PyPI trusted publishing (no API-token secret needed).
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -265,11 +265,9 @@ jobs:
           git commit -m "chore(release): stamp $version"
           git push origin main
 
-      # Runs only after the PYPI_API_TOKEN secret is configured on the repo
-      # (Settings → Secrets and variables → Actions). Until then wheels are
-      # attached to the GitHub release only.
+      # Trusted publishing (OIDC): PyPI verifies this workflow run's identity
+      # via the pending publisher configured at
+      # pypi.org/manage/account/publishing/ (owner jr2804, repo p56-asl,
+      # workflow release.yml, environment empty).
       - name: Publish to PyPI
-        if: env.HAS_PYPI_TOKEN == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
