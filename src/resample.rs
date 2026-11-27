@@ -261,7 +261,7 @@ mod tests {
 
         assert!(r.process(&[0.0]).is_err());
         // second flush returns empty, no error
-        assert!(r.flush(0).unwrap().is_empty());
+        assert_eq!(r.flush(0).unwrap(), Vec::<f32>::new());
     }
 
     /// Invalid rates are rejected.

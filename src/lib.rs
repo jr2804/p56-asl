@@ -402,6 +402,8 @@ impl PyResampler {
 }
 
 /// The `p56_asl._native` extension module.
+// PyO3 requires the init function's name to match the `_native` module name.
+#[allow(clippy::used_underscore_items)]
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyActiveSpeechLevelMeter>()?;
