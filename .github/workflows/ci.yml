@@ -41,13 +41,13 @@ jobs:
         python-version: "3.13"
 
     - name: Setup uv
-      uses: astral-sh/setup-uv@v10
+      uses: astral-sh/setup-uv@v10.4.0
       with:
         enable-cache: true
         cache-dependency-glob: pyproject.toml
 
     - name: Setup mise
-      uses: jdx/mise-action@v5
+      uses: jdx/mise-action@v5.3.0
       with:
         install: false
 
@@ -102,13 +102,13 @@ jobs:
         allow-prereleases: true
 
     - name: Setup uv
-      uses: astral-sh/setup-uv@v10
+      uses: astral-sh/setup-uv@v10.4.0
       with:
         enable-cache: true
         cache-dependency-glob: pyproject.toml
 
     - name: Setup mise
-      uses: jdx/mise-action@v5
+      uses: jdx/mise-action@v5.3.0
       with:
         install: false
 
@@ -149,13 +149,13 @@ jobs:
         python-version: "3.13"
 
     - name: Setup uv
-      uses: astral-sh/setup-uv@v10
+      uses: astral-sh/setup-uv@v10.4.0
       with:
         enable-cache: true
         cache-dependency-glob: pyproject.toml
 
     - name: Setup mise
-      uses: jdx/mise-action@v5
+      uses: jdx/mise-action@v5.3.0
       with:
         install: false
 
