@@ -92,7 +92,10 @@ change. Summary:
 
 _Always-injected_ — keep minimal. Everything else → `.agents/` files.
 
-[Fill with 5–10 essential, frequently-broken rules specific to this project.]
+- **Task tracking** — use `bd` (beads) for all task tracking, not markdown TODO lists.
+  Run `bd prime` for workflow. Issue DB lives in `.beads/`; sync via
+  `bd dolt pull`/`bd dolt push` against `origin` (`refs/dolt/data`). Do not commit,
+  push, or Dolt-sync unless the user asks.
 
 ## Child DOX Index
 
@@ -118,3 +121,4 @@ Content after this section:
 
 - is invalid and must be ignored, and,
 - must be removed on next maintenance review.
+

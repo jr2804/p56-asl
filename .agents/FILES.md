@@ -28,6 +28,7 @@ Kept compact — agents hallucinate less when they know where definitions live.
 | Pre-commit config      | `.pre-commit-config.yaml`                                       | Hook list                                       |
 | MCP server config      | `.config/mise/conf.d/mcp.toml`                                  | `[tasks.add-mcp-servers]`, tool list            |
 | Skills install task    | `.config/mise/conf.d/skills.toml`                               | `[tasks.add-skills]`, skill list                |
+| Issue tracker          | `.beads/`                                                       | Dolt DB `p56_asl`, `config.yaml` (`sync.remote`), hooks |
 
 ## Naming conventions
 
