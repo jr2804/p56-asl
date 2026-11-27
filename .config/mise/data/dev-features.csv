@@ -14,4 +14,4 @@ dev,github:AlmogBaku/debug-skill,latest,,,AlmogBaku/debug-skill,
 dev,github:rtk-ai/rtk,latest,,,https://github.com/FlorianBruniaux/claude-code-ultimate-guide/tree/main/examples,rtk-optimizer
 tracking,github:gastownhall/beads,latest,,,gastownhall/beads,
 tracking,github:dolthub/dolt,latest,,,,
-tracking,pipx:beads-mcp,latest,./beads-mcp,beads,,
+tracking,pipx:beads-mcp,latest,mise x --command beads-mcp,beads,,

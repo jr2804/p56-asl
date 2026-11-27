@@ -54,6 +54,7 @@ uv.lock
 # MCP / coding assistant directories
 .vscode
 opencode.json
+opencode.jsonc
 .opencode
 
 # Skills lock file
