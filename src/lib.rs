@@ -13,8 +13,11 @@ mod params;
 mod prefilter;
 mod resample;
 
+#[cfg(feature = "python")]
 use numpy::{PyArray1, PyArrayDescrMethods, PyArrayMethods, PyUntypedArray, PyUntypedArrayMethods};
+#[cfg(feature = "python")]
 use pyo3::exceptions::PyValueError;
+#[cfg(feature = "python")]
 use pyo3::prelude::*;
 
 /// Converts a numpy 1-D array of any supported dtype to `Vec<f32>`,
@@ -24,6 +27,7 @@ use pyo3::prelude::*;
 /// The meter always works internally in f32 (like the reference
 /// implementation); integer WAV files are converted to floats at the
 /// boundary by the reader (soundfile) before reaching the core.
+#[cfg(feature = "python")]
 fn samples_to_f32(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Vec<f32>> {
     let arr: &Bound<'_, PyUntypedArray> = obj
         .cast()
@@ -63,6 +67,7 @@ fn samples_to_f32(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Vec<f32>> 
 }
 
 /// Extended ITU-T Rec. P.56 active speech level meter (Rust core).
+#[cfg(feature = "python")]
 #[pyclass(module = "p56_asl._native", name = "ActiveSpeechLevelMeter")]
 struct PyActiveSpeechLevelMeter {
     inner: actlevel::ActiveSpeechLevelMeter,
@@ -73,6 +78,7 @@ struct PyActiveSpeechLevelMeter {
     total_input: u64,
 }
 
+#[cfg(feature = "python")]
 #[pymethods]
 impl PyActiveSpeechLevelMeter {
     #[new]
@@ -206,12 +212,19 @@ impl PyActiveSpeechLevelMeter {
 }
 
 /// Result of a completed measurement.
-#[pyclass(module = "p56_asl._native", name = "Measurement", frozen, skip_from_py_object)]
+#[cfg(feature = "python")]
+#[pyclass(
+    module = "p56_asl._native",
+    name = "Measurement",
+    frozen,
+    skip_from_py_object
+)]
 #[derive(Clone)]
 struct PyMeasurement {
     inner: actlevel::Measurement,
 }
 
+#[cfg(feature = "python")]
 #[pymethods]
 impl PyMeasurement {
     /// Active speech level, in dB re. `max_amplitude` (dBov by default).
@@ -278,11 +291,13 @@ impl PyMeasurement {
 ///
 /// Streaming-safe biquad cascade matching the tolerance corridor of the
 /// selected band (NB, SWB or FB) at the configured sampling rate.
+#[cfg(feature = "python")]
 #[pyclass(module = "p56_asl._native", name = "PreFilter")]
 struct PyPreFilter {
     inner: prefilter::PreFilter,
 }
 
+#[cfg(feature = "python")]
 #[pymethods]
 impl PyPreFilter {
     #[new]
@@ -345,12 +360,14 @@ impl PyPreFilter {
 /// carries its overlap across `process` calls. `flush` zero-pads the
 /// final partial chunk and trims the ramp-up delay so the total output
 /// length equals `round(total_input * target / source)`.
+#[cfg(feature = "python")]
 #[pyclass(module = "p56_asl._native", name = "Resampler")]
 struct PyResampler {
     inner: resample::Resampler,
     total_input: u64,
 }
 
+#[cfg(feature = "python")]
 #[pymethods]
 impl PyResampler {
     /// Creates a resampler from `sample_rate` to `target_rate` (Hz).
@@ -404,6 +421,7 @@ impl PyResampler {
 /// The `p56_asl._native` extension module.
 // PyO3 requires the init function's name to match the `_native` module name.
 #[allow(clippy::used_underscore_items)]
+#[cfg(feature = "python")]
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyActiveSpeechLevelMeter>()?;
@@ -419,4 +437,4 @@ pub use actlevel::{bin_interp, ActiveSpeechLevelMeter, Measurement};
 pub use error::{Error, Result};
 pub use params::Params;
 pub use prefilter::{Band, PreFilter};
-pub use resample::Resampler;
+pub use resample::{Resampler, TARGET_RATE};

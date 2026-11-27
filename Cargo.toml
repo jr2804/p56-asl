@@ -11,8 +11,10 @@ name = "_native"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-numpy = "0.29"
-pyo3 = "0.29"
+# Optional so the pure-Rust core builds without a Python toolchain:
+# `cargo build --no-default-features`.
+numpy = { version = "0.29", optional = true }
+pyo3 = { version = "0.29", optional = true }
 rubato = { version = "0.16.2", default-features = false, features = ["fft_resampler"] }
 thiserror = "2"
 
@@ -55,11 +57,14 @@ map_unwrap_or = "allow"
 # fixed-size stack buffers are normal in DSP code:
 large_stack_arrays = "allow"
 
-# extension-module must not be enabled for `cargo test`; maturin enables it
-# when building the actual extension (see [tool.maturin] in pyproject.toml).
+# `extension-module` must not be enabled for `cargo test` (it suppresses
+# linking libpython); maturin enables it when building the actual extension
+# (see [tool.maturin] in pyproject.toml). The pure-Rust core is available via
+# `--no-default-features`, which omits `python` and therefore pyo3/numpy.
 [features]
-default = []
-extension-module = ["pyo3/extension-module"]
+default = ["python"]
+python = ["dep:pyo3", "dep:numpy"]
+extension-module = ["python", "pyo3/extension-module"]
 
 [profile.release]
 # Keep numeric results deterministic across builds (no fast-math style opts)
